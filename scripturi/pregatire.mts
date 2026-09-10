@@ -43,6 +43,7 @@ if (!valori.get("VAPID_CHEIE_PUBLICA") || !valori.get("VAPID_CHEIE_PRIVATA")) {
 }
 
 pune("VAPID_CONTACT", () => "mailto:hac.filip05@gmail.com");
+if (pune("CHEIE_CRON", () => randomBytes(24).toString("base64url"))) noi.push("CHEIE_CRON");
 pune("GOOGLE_EMAIL_SERVICIU", () => "");
 pune("GOOGLE_CHEIE_PRIVATA", () => "");
 pune("BUGET_SHEET_ID", () => "1PsVly2ypaJ04C22TjNJ7NIbkCZpUORYzMUKKPe5hLLQ");

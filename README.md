@@ -49,10 +49,11 @@ categoriile lunii curente și, de la etapa 3, scrie înapoi rânduri de tranzac�
 
 ## Etape
 
-1. **Fundația** — autentificare, PWA, listă de cumpărături, catalog cu cod de bare
-   și prețuri, totalul coșului, bugetul (citire). ← *aici suntem*
-2. Notificări push, ecranul „Azi”, zonele casei, curățenie recurentă, declutter rotativ.
-3. Cămara, expirări, bonul fiscal cu AI, bugetul (scriere).
+1. ~~Fundația~~ — autentificare, PWA, listă de cumpărături, catalog cu cod de bare
+   și prețuri, totalul coșului, bugetul (citire). **gata**
+2. ~~Notificări push, ecranul „Azi”, zonele casei, curățenie recurentă, declutter
+   rotativ~~, plus cheltuieli manuale pe orice categorie și scrierea în buget. **gata**
+3. Cămara, expirări, bonul fiscal cu AI.
 4. Google Calendar și motorul de propuneri.
 5. Cookidoo, planificatorul de meniu, fazele ciclului, „ce gătim azi”.
 6. Calendarul casei, dorințe, șabloane de bagaje, Siri Shortcuts.
@@ -75,3 +76,29 @@ Pentru buget (și, mai târziu, pentru calendare):
    Adresa e afișată de script și arată a `acasa@....iam.gserviceaccount.com`.
 
 Contul de serviciu nu vede decât ce i-ai partajat explicit. Nu cere parola nimănui.
+
+## Ceasul: notificările programate
+
+Vercel pe plan gratuit rulează cron o dată pe zi, prea rar pentru remindere la oră
+fixă. În schimb, `/api/cron` e gândită să fie chemată des și decide singură ce are
+de făcut la ora la care a fost chemată:
+
+- trimite reminderele ajunse la scadență;
+- o singură dată pe zi, la `ORA_REZUMAT` (implicit 8, ora României), trimite
+  rezumatul zilei.
+
+Pune pe [cron-job.org](https://cron-job.org) (gratis) o chemare din 5 în 5 minute la:
+
+```
+https://<adresa-aplicației>/api/cron?cheie=<CHEIE_CRON din .env.local>
+```
+
+## Probe
+
+```bash
+npm run proba           # așezarea foii de buget — funcții pure, fără rețea
+npm run proba:scriere   # în gol pe foaia reală: arată unde ar scrie, nu scrie
+```
+
+`npm run proba:scriere -- --chiar` face drumul întreg pe o filă de unică folosință
+(`PROBĂ-2099-01`), pe care o șterge la final. Nicio lună reală nu e atinsă.

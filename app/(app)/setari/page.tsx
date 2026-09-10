@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 
 import Antet from "@/componente/Antet";
+import Notificari from "@/componente/Notificari";
 import { lunaCurenta } from "@/lib/formatare";
 import { bugetulLunii } from "@/lib/servicii/buget";
 import { areGoogle } from "@/lib/servicii/google";
+import { cheiePublica } from "@/lib/servicii/push";
 import { iesi, sesiuneCurenta } from "@/lib/sesiune";
 
 export const metadata = { title: "Setări — Acasă" };
@@ -41,6 +43,13 @@ export default async function PaginaSetari() {
               serviciu.
             </p>
           )}
+        </section>
+
+        <section className="card p-4">
+          <h2 className="eticheta">Notificări</h2>
+          <div className="mt-2">
+            <Notificari cheiePublica={cheiePublica()} />
+          </div>
         </section>
 
         <section className="card p-4">

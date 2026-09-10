@@ -9,6 +9,14 @@ import { usePathname } from "next/navigation";
   fizic, bara de sistem trece exact peste ea.
 */
 
+const CAI = [
+  { href: "/", eticheta: "Azi", icoana: IcoanaSoare },
+  { href: "/lista", eticheta: "Listă", icoana: IcoanaLista },
+  { href: "/casa", eticheta: "Casa", icoana: IcoanaCasa },
+  { href: "/bani", eticheta: "Bani", icoana: IcoanaBani },
+  { href: "/setari", eticheta: "Setări", icoana: IcoanaSetari },
+];
+
 export default function NavigareJos() {
   const cale = usePathname();
 
@@ -104,20 +112,6 @@ function IcoanaBani() {
   );
 }
 
-/*
-  Lista stă la sfârșit, după icoane, nu la începutul fișierului.
-
-  Ridicarea declarațiilor de funcții ar face-o să meargă oriunde, dar reîncărcarea
-  la cald din dezvoltare se încurcă atunci când un modul își schimbă icoanele și
-  aruncă „IcoanaX is not defined” până la o reîncărcare completă. Așa nu mai apare.
-*/
-const CAI = [
-  { href: "/", eticheta: "Azi", icoana: IcoanaSoare },
-  { href: "/lista", eticheta: "Listă", icoana: IcoanaLista },
-  { href: "/casa", eticheta: "Casa", icoana: IcoanaCasa },
-  { href: "/bani", eticheta: "Bani", icoana: IcoanaBani },
-  { href: "/setari", eticheta: "Setări", icoana: IcoanaSetari },
-];
 
 function IcoanaSetari() {
   return (
