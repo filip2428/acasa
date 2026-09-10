@@ -81,47 +81,44 @@ await db
 type Trebuinta = [titlu: string, frecventaZile: number, minute: number, efort: string];
 
 const ZONE: [zona: string, sarcini: Trebuinta[]][] = [
+  ["Sufragerie", [
+    ["Aspirat", 7, 20, "mediu"],
+    ["Șters praful", 10, 15, "usor"],
+    ["Spălat geamurile", 90, 45, "greu"],
+  ]],
   ["Bucătărie", [
     ["Șters blaturile și aragazul", 2, 10, "usor"],
     ["Spălat pe jos", 7, 15, "mediu"],
+    ["Aruncat din frigider ce a expirat", 7, 10, "usor"],
     ["Curățat hota și filtrul", 60, 25, "mediu"],
+    ["Spălat rafturile frigiderului", 60, 30, "mediu"],
     ["Curățat cuptorul", 90, 40, "greu"],
   ]],
-  ["Baie", [
+  ["Baie mare", [
     ["Curățat chiuveta și oglinda", 7, 10, "usor"],
-    ["Spălat cada și faianța", 14, 30, "greu"],
     ["Spălat pe jos", 7, 10, "mediu"],
+    ["Spălat cada și faianța", 14, 30, "greu"],
     ["Detartrat capul de duș", 120, 20, "mediu"],
+  ]],
+  ["Baie mică", [
+    ["Curățat chiuveta și oglinda", 7, 8, "usor"],
+    ["Spălat pe jos", 7, 8, "usor"],
+    ["Spălat faianța", 21, 20, "mediu"],
   ]],
   ["Dormitor", [
     ["Schimbat lenjeria", 14, 15, "mediu"],
     ["Aspirat", 7, 15, "mediu"],
     ["Șters praful", 10, 15, "usor"],
   ]],
-  ["Living", [
-    ["Aspirat", 7, 20, "mediu"],
-    ["Șters praful", 10, 15, "usor"],
-    ["Spălat geamurile", 90, 45, "greu"],
+  ["Birou", [
+    ["Șters praful și birourile", 10, 15, "usor"],
+    ["Aspirat", 10, 15, "mediu"],
+    ["Strâns cabluri și hârtii", 30, 20, "usor"],
   ]],
-  ["Hol", [
-    ["Aspirat și șters pe jos", 7, 10, "usor"],
-    ["Aranjat încălțămintea", 30, 15, "usor"],
+  ["Debara bucătărie", [
+    ["Verificat termenele la conserve", 60, 20, "usor"],
   ]],
-  ["Balcon", [
-    ["Măturat", 14, 10, "usor"],
-    ["Udat plantele", 3, 5, "usor"],
-  ]],
-  ["Frigider", [
-    ["Aruncat ce a expirat", 7, 10, "usor"],
-    ["Spălat rafturile", 60, 30, "mediu"],
-  ]],
-  ["Congelator", [["Dezghețat și inventariat", 180, 60, "greu"]]],
-  ["Debara", []],
-  ["Dulapul de haine", []],
-  ["Mașină", [
-    ["Golit gunoiul din mașină", 21, 10, "usor"],
-    ["Spălat mașina", 30, 30, "mediu"],
-  ]],
+  ["Debara baie", []],
 ];
 
 for (const [indice, [numeZona, treburi]] of ZONE.entries()) {

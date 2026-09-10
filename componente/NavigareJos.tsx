@@ -10,8 +10,9 @@ import { usePathname } from "next/navigation";
 */
 
 const CAI = [
-  { href: "/", eticheta: "Azi", icoana: IcoanaCasa },
+  { href: "/", eticheta: "Azi", icoana: IcoanaSoare },
   { href: "/lista", eticheta: "Listă", icoana: IcoanaLista },
+  { href: "/casa", eticheta: "Casa", icoana: IcoanaCasa },
   { href: "/produse", eticheta: "Produse", icoana: IcoanaCos },
   { href: "/setari", eticheta: "Setări", icoana: IcoanaSetari },
 ];
@@ -66,6 +67,17 @@ function IcoanaCasa() {
       <path d="M3 10.5 12 3l9 7.5" />
       <path d="M5.5 9.5V20h13V9.5" />
       <path d="M9.75 20v-5.5h4.5V20" />
+    </svg>
+  );
+}
+
+// „Azi” e ziua care începe, nu casa — casa are ecranul ei acum.
+function IcoanaSoare() {
+  return (
+    <svg {...proprietatiIcoana}>
+      <circle cx="12" cy="13" r="3.5" />
+      <path d="M12 5.5V4M12 22v-1.5M5.6 13H4M20 13h-1.5M7.3 8.3 6.2 7.2M17.8 7.2l-1.1 1.1" />
+      <path d="M4 20h16" />
     </svg>
   );
 }
