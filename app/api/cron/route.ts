@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { persoane, remindere, setari } from "@/lib/db/schema";
+import { evenimenteDeAnuntat } from "@/lib/servicii/calendar-casa";
+import { ceExpira } from "@/lib/servicii/camara";
 import { declutterulLunii, treburiScadente } from "@/lib/servicii/planificator";
 import { instiinteaza } from "@/lib/servicii/push";
 
@@ -102,9 +104,32 @@ async function trimiteRezumatul() {
   // Marcăm întâi, ca o a doua chemare în aceeași oră să nu trimită din nou.
   await db.insert(setari).values({ cheie, valoare: { la: Date.now() } });
 
-  const [treburi, declutter] = await Promise.all([treburiScadente(ziua), declutterulLunii()]);
+  const [treburi, declutter, expira, evenimente] = await Promise.all([
+    treburiScadente(ziua),
+    declutterulLunii(),
+    ceExpira(2, ziua),
+    evenimenteDeAnuntat(ziua),
+  ]);
 
   const bucati: string[] = [];
+
+  // Ce expiră trece înaintea treburilor: mâncarea aruncată nu se mai recuperează.
+  if (expira.length > 0) {
+    bucati.push(
+      expira.length === 1
+        ? `expiră ${expira[0].nume.toLowerCase()}`
+        : `expiră ${expira.length} lucruri, primul e ${expira[0].nume.toLowerCase()}`,
+    );
+  }
+
+  for (const eveniment of evenimente.slice(0, 2)) {
+    bucati.push(
+      eveniment.zilePanaLa != null && eveniment.zilePanaLa < 0
+        ? `${eveniment.titlu} a trecut de termen`
+        : `${eveniment.titlu} în ${eveniment.zilePanaLa} zile`,
+    );
+  }
+
   if (treburi.length > 0) {
     bucati.push(
       treburi.length === 1

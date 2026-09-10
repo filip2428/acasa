@@ -1,13 +1,16 @@
 import Link from "next/link";
 
 import Antet from "@/componente/Antet";
-import { lei, ziLunga } from "@/lib/formatare";
+import { candFataDeAzi, lei, ziLunga } from "@/lib/formatare";
 import { bugetulLunii } from "@/lib/servicii/buget";
+import { evenimenteDeAnuntat } from "@/lib/servicii/calendar-casa";
+import { ceExpira } from "@/lib/servicii/camara";
 import { persoaneleCasei } from "@/lib/servicii/casa";
 import { articoleleListei, listaCurenta, totaluri } from "@/lib/servicii/lista";
 import { declutterulLunii, treburiScadente } from "@/lib/servicii/planificator";
 import { sesiuneCurenta } from "@/lib/sesiune";
 
+import Reminder from "./Reminder";
 import Treburi from "./Treburi";
 
 /*
@@ -22,13 +25,18 @@ const CATEGORII_URMARITE = ["Mâncare", "Transport", "hobby", "Mâncare în ora�
 export default async function PaginaAzi() {
   const sesiune = await sesiuneCurenta();
 
-  const [lista, buget, treburi, declutter, persoane] = await Promise.all([
+  const [lista, buget, treburi, declutter, persoane, expira, evenimente] = await Promise.all([
     listaCurenta(),
     bugetulLunii(),
     treburiScadente(),
     declutterulLunii(),
     persoaneleCasei(),
+    ceExpira(3),
+    evenimenteDeAnuntat(),
   ]);
+
+  // Cu doi oameni în casă, „celălalt” e cel care nu sunt eu.
+  const celalalt = persoane.find((p) => p.id !== sesiune?.persoanaId);
 
   const articole = await articoleleListei(lista.id);
   const sume = totaluri(articole);
@@ -43,6 +51,46 @@ export default async function PaginaAzi() {
       <Antet supratitlu={ziLunga(new Date())} titlu={`Bună, ${sesiune?.nume ?? ""}`} />
 
       <div className="mx-auto -mt-5 max-w-lg space-y-4 px-4">
+        {expira.length > 0 && (
+          <Link href="/camara" className="card intra block p-4">
+            <span className="eticheta">Din cămară</span>
+            <p className="titlu mt-1 text-xl">
+              {expira[0].zilePanaLaExpirare != null && expira[0].zilePanaLaExpirare < 0
+                ? "A expirat ceva"
+                : "Expiră curând"}
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-caramida)]">
+              {expira
+                .slice(0, 3)
+                .map((r) => r.nume)
+                .join(", ")}
+              {expira.length > 3 ? ` și încă ${expira.length - 3}` : ""}
+            </p>
+          </Link>
+        )}
+
+        {evenimente.length > 0 && (
+          <Link href="/casa/calendar" className="card block p-4">
+            <span className="eticheta">Din calendar</span>
+            <ul className="mt-2 space-y-1.5">
+              {evenimente.slice(0, 3).map((e) => (
+                <li key={e.id} className="flex items-baseline justify-between gap-3">
+                  <span className="truncate text-[0.9375rem]">{e.titlu}</span>
+                  <span
+                    className={`shrink-0 text-xs ${
+                      e.zilePanaLa != null && e.zilePanaLa < 0
+                        ? "text-[var(--color-caramida)]"
+                        : "text-[var(--color-creion)]"
+                    }`}
+                  >
+                    {e.scadenta ? candFataDeAzi(e.scadenta) : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Link>
+        )}
+
         <div className="intra">
           <Treburi
             treburi={treburi}
@@ -110,6 +158,12 @@ export default async function PaginaAzi() {
               ))}
             </ul>
           </Link>
+        )}
+
+        {celalalt && (
+          <div className="pt-1">
+            <Reminder catre={celalalt.id} numeleLui={celalalt.nume} />
+          </div>
         )}
       </div>
     </main>

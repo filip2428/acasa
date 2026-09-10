@@ -4,6 +4,7 @@ import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { efectuari, persoane, sarcini, setari, zone } from "@/lib/db/schema";
+import type { DeclutterulLunii, TreabaScadenta } from "@/lib/domeniu";
 import { azi, lunaCurenta } from "@/lib/formatare";
 
 /*
@@ -21,18 +22,6 @@ import { azi, lunaCurenta } from "@/lib/formatare";
   Motorul care se uită și în calendarul Google și propune intervale libere vine
   la etapa următoare. Deocamdată răspundem doar la „ce a ajuns la scadență”.
 */
-
-export type TreabaScadenta = {
-  id: number;
-  titlu: string;
-  zona: string;
-  minuteEstimate: number;
-  efort: string;
-  atribuitLui: number | null;
-  /** Câte zile au trecut peste termen. 0 = fix azi. */
-  intarziere: number;
-  evitaLaMenstruatie: boolean;
-};
 
 /** Data la care ar trebui făcută următoarea dată o treabă. */
 function scadenta(ultimaEfectuareLa: string | null, frecventaZile: number | null) {
@@ -90,13 +79,6 @@ export async function treburiScadente(ziua = azi()): Promise<TreabaScadenta[]> {
 }
 
 /* ------------------------------------------------------- declutterul lunii */
-
-export type DeclutterulLunii = {
-  zonaId: number;
-  zona: string;
-  sarcinaId: number | null;
-  facut: boolean;
-};
 
 const cheieDeclutter = (luna: string) => `declutter:${luna}`;
 

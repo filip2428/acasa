@@ -27,6 +27,13 @@ export default async function PaginaLista() {
         supratitlu="Cumpărături"
         titlu={deBifat > 0 ? `${deBifat} de luat` : "Lista e goală"}
         dreapta={
+          <div className="flex items-center gap-1">
+          <Link
+            href="/camara"
+            className="rounded-lg px-2 py-1.5 text-xs font-semibold text-white/75"
+          >
+            Cămară
+          </Link>
           <Link
             href="/produse"
             className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold text-white/75"
@@ -36,6 +43,7 @@ export default async function PaginaLista() {
               <path d="m9 6 6 6-6 6" />
             </svg>
           </Link>
+          </div>
         }
       />
 

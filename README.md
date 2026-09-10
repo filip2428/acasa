@@ -53,10 +53,13 @@ categoriile lunii curente și, de la etapa 3, scrie înapoi rânduri de tranzac�
    și prețuri, totalul coșului, bugetul (citire). **gata**
 2. ~~Notificări push, ecranul „Azi”, zonele casei, curățenie recurentă, declutter
    rotativ~~, plus cheltuieli manuale pe orice categorie și scrierea în buget. **gata**
-3. Cămara, expirări, bonul fiscal cu AI.
-4. Google Calendar și motorul de propuneri.
-5. Cookidoo, planificatorul de meniu, fazele ciclului, „ce gătim azi”.
-6. Calendarul casei, dorințe, șabloane de bagaje, Siri Shortcuts.
+3. ~~Cămara, expirări~~ **gata** · bonul fiscal cu AI — *are nevoie de o cheie
+   `ANTHROPIC_API_KEY`*.
+4. Google Calendar și motorul de propuneri — *are nevoie ca fiecare să-și
+   partajeze calendarul cu contul de serviciu*.
+5. Cookidoo, planificatorul de meniu, fazele ciclului, „ce gătim azi” — *are
+   nevoie de credențialele Cookidoo*.
+6. ~~Calendarul casei, dorințe, șabloane de bagaje~~ **gata** · Siri Shortcuts.
 
 Schema bazei de date (`lib/db/schema.ts`) e scrisă din start pentru toate etapele.
 
@@ -76,6 +79,16 @@ Pentru buget (și, mai târziu, pentru calendare):
    Adresa e afișată de script și arată a `acasa@....iam.gserviceaccount.com`.
 
 Contul de serviciu nu vede decât ce i-ai partajat explicit. Nu cere parola nimănui.
+
+## Ecranele
+
+| Ecran | Ce face |
+|---|---|
+| **Azi** | Ce expiră, ce e în calendar, treburile scadente, declutterul lunii, lista, bugetul. Nimic care nu cere o decizie astăzi. |
+| **Listă** | Cumpărăturile, cu preț și total. De aici se ajunge la **Cămară** și la **Catalog**. |
+| **Casa** | Zone și treburi · Calendar (ITP, revizii, documente) · Dorințe · Bagaje. |
+| **Bani** | Cheltuieli manuale pe orice categorie din buget, plus starea lunii. |
+| **Setări** | Notificări, starea legăturii cu bugetul, ieșire din cont. |
 
 ## Ceasul: notificările programate
 

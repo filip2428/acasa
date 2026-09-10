@@ -2,7 +2,7 @@
 
 import { useOptimistic, useTransition } from "react";
 
-import type { DeclutterulLunii, TreabaScadenta } from "@/lib/servicii/planificator";
+import type { DeclutterulLunii, TreabaScadenta } from "@/lib/domeniu";
 
 import { amanaZonaDeDeclutter, bifeazaTreaba } from "./actiuni";
 
