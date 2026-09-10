@@ -396,6 +396,11 @@ export const evenimente = sqliteTable(
     notite: text("notite"),
     activ: integer("activ", { mode: "boolean" }).notNull().default(true),
     creatDe: integer("creat_de").references(() => persoane.id),
+    // Se completează doar dacă cineva a bifat explicit „trece-l și în Google”.
+    // Ținem și calendarul, nu doar id-ul evenimentului: fără el n-am ști pe unde
+    // să-l ștergem sau să-l mutăm mai târziu.
+    googleCalendarId: text("google_calendar_id"),
+    googleEvenimentId: text("google_eveniment_id"),
   },
   (t) => [index("evenimente_data").on(t.data)],
 );

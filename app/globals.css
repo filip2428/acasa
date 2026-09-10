@@ -31,6 +31,14 @@
   --color-caramida: #c0533c;
   --color-caramida-palid: #f9e4e0;
 
+  /*
+    Cele două culori de mai jos nu spun nimic despre stare — spun cine. În
+    calendar, fiecare om are dunga lui sub zi. Sunt tot smalțuri, dintr-un set
+    de vase vechi: albastru de cobalt și prună.
+  */
+  --color-cobalt: #35617f;
+  --color-pruna: #7c4a5f;
+
   --color-cerneala: #1b2420;
   --color-creion: #5f6b63;
   --color-linie: #dfe4dc;

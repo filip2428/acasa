@@ -40,7 +40,7 @@ npm run cod:nou -- --id 1
 | Serviciu | La ce | Cum se leagă |
 |---|---|---|
 | Google Sheets | Bugetul lunar (`Buget_Familial`) | Partajezi foaia cu adresa contului de serviciu, ca **Editor** |
-| Google Calendar | Ferestrele libere ale fiecăruia | Fiecare își partajează calendarul, **doar citire** |
+| Google Calendar | Programul fiecăruia și ferestrele libere | Fiecare își leagă calendarul din **Setări**; partajare **doar citire** (sau „modificări la evenimente”, dacă vrei să poți scrie în el din aplicație) |
 | Open Food Facts | Nume și poză după codul de bare | Public, fără cont |
 | Cookidoo | Rețete și plan săptămânal (etapa 5) | Cont propriu, bibliotecă neoficială |
 
@@ -55,8 +55,8 @@ categoriile lunii curente și, de la etapa 3, scrie înapoi rânduri de tranzac�
    rotativ~~, plus cheltuieli manuale pe orice categorie și scrierea în buget. **gata**
 3. ~~Cămara, expirări~~ **gata** · bonul fiscal cu AI — *are nevoie de o cheie
    `ANTHROPIC_API_KEY`*.
-4. Google Calendar și motorul de propuneri — *are nevoie ca fiecare să-și
-   partajeze calendarul cu contul de serviciu*.
+4. ~~Google Calendar și motorul de propuneri~~ **gata** — *fiecare trebuie să-și
+   partajeze calendarul cu contul de serviciu și să-l lege din Setări*.
 5. Cookidoo, planificatorul de meniu, fazele ciclului, „ce gătim azi” — *are
    nevoie de credențialele Cookidoo*.
 6. ~~Calendarul casei, dorințe, șabloane de bagaje~~ **gata** · Siri Shortcuts.
@@ -77,8 +77,45 @@ Pentru buget (și, mai târziu, pentru calendare):
    în `.env.local`, cu cheia privată formatată cum trebuie.
 6. Partajează foaia `Buget_Familial` cu adresa contului de serviciu, ca **Editor**.
    Adresa e afișată de script și arată a `acasa@....iam.gserviceaccount.com`.
+7. Fiecare, pe rând: Google Calendar → calendarul propriu → **Setări și
+   partajare** → *Partajați cu anumite persoane* → aceeași adresă, cu dreptul
+   **Vizualizați toate detaliile evenimentelor**. Apoi, în aplicație, **Setări →
+   Calendarul tău Google** → scrii adresa calendarului (de obicei adresa de
+   Gmail) și apeși *Verifică și leagă*. Verificarea citește efectiv din calendar;
+   nu salvează nimic dacă n-a mers.
 
 Contul de serviciu nu vede decât ce i-ai partajat explicit. Nu cere parola nimănui.
+
+## Calendarul
+
+Două vederi, pentru două întrebări:
+
+- **Luna** — grila obișnuită, în care intră suprapuse scadențele casei (punct
+  verde), ritmul treburilor (punct alamă) și programul fiecăruia din Google
+  (dunga colorată de sub zi, o culoare de om). Zilele goale se văd la fel de
+  clar ca cele pline — acolo încape ceva.
+- **Listă** — ce urmează, pe categorii: mașină, casă, sănătate, documente.
+
+Recurența pleacă de la **ultima efectuare**, nu de la o dată fixă: apeși „Făcut
+azi” și următorul se socotește de acolo. Așa ITP-ul nu se decalează an de an.
+
+Orice lucru din calendarul casei poate fi trecut și în Google Calendar, dar
+**numai dacă bifezi asta la el** — nu e niciodată implicit. Copia din Google se
+mută singură când apeși „Făcut azi” și dispare când scoți evenimentul.
+
+## Propunerea zilei
+
+Dacă ți-ai legat calendarul, ecranul „Azi” poate spune: *„Ai liber de la 17:00 și
+îți ia vreo 20 de minute — aspirat sufrageria.”* Regulile ei:
+
+1. o singură propunere pe zi, de om — dacă ai zis „nu azi”, gata pentru azi;
+2. numai când chiar încape întreagă între 15:00 și 20:00, nu îndesată între două
+   ședințe;
+3. numai lucruri deja scadente — nu inventăm treabă ca să umplem timpul liber.
+
+„Pune-o la 17:00” o scrie în calendarul tău, cu durata estimată. Pentru asta e
+nevoie ca partajarea calendarului să fie pe „Faceți modificări la evenimente”;
+dacă e doar la citire, aplicația spune exact asta și nu se preface că a mers.
 
 ## Ecranele
 
@@ -86,9 +123,9 @@ Contul de serviciu nu vede decât ce i-ai partajat explicit. Nu cere parola nim�
 |---|---|
 | **Azi** | Ce expiră, ce e în calendar, treburile scadente, declutterul lunii, lista, bugetul. Nimic care nu cere o decizie astăzi. |
 | **Listă** | Cumpărăturile, cu preț și total. De aici se ajunge la **Cămară** și la **Catalog**. |
-| **Casa** | Zone și treburi · Calendar (ITP, revizii, documente) · Dorințe · Bagaje. |
+| **Casa** | Zone și treburi · Calendar (grila lunii + listă pe categorii) · Dorințe · Bagaje. |
 | **Bani** | Cheltuieli manuale pe orice categorie din buget, plus starea lunii. |
-| **Setări** | Notificări, starea legăturii cu bugetul, ieșire din cont. |
+| **Setări** | Calendarul tău Google, notificări, starea legăturii cu bugetul, ieșire din cont. |
 
 ## Ceasul: notificările programate
 
@@ -109,7 +146,7 @@ https://<adresa-aplicației>/api/cron?cheie=<CHEIE_CRON din .env.local>
 ## Probe
 
 ```bash
-npm run proba           # așezarea foii de buget — funcții pure, fără rețea
+npm run proba           # așezarea foii de buget și socotelile calendarului
 npm run proba:scriere   # în gol pe foaia reală: arată unde ar scrie, nu scrie
 ```
 

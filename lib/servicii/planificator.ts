@@ -78,6 +78,65 @@ export async function treburiScadente(ziua = azi()): Promise<TreabaScadenta[]> {
     .sort((a, b) => b.intarziere - a.intarziere || a.minuteEstimate - b.minuteEstimate);
 }
 
+/**
+ * Treburile care pică într-un interval, cu tot cu repetările lor.
+ *
+ * Ecranul „Azi” întreabă doar ce e scadent acum; grila lunii are nevoie de
+ * altceva — de fiecare dată când o treabă se va întoarce în luna asta, ca să se
+ * vadă ritmul: baia sâmbăta, aspiratul de două ori pe săptămână.
+ */
+export async function treburiInInterval(deLa: string, panaLa: string, ziua = azi()) {
+  const randuri = await db
+    .select({
+      id: sarcini.id,
+      titlu: sarcini.titlu,
+      zona: zone.nume,
+      minuteEstimate: sarcini.minuteEstimate,
+      frecventaZile: sarcini.frecventaZile,
+      ultimaEfectuareLa: sarcini.ultimaEfectuareLa,
+    })
+    .from(sarcini)
+    .leftJoin(zone, eq(sarcini.zonaId, zone.id))
+    .where(and(eq(sarcini.activ, true), eq(sarcini.tip, "curatenie")));
+
+  const iesire: {
+    id: number;
+    titlu: string;
+    zona: string;
+    minute: number;
+    ziua: string;
+    intarziat: boolean;
+  }[] = [];
+
+  for (const r of randuri) {
+    if (!r.frecventaZile) continue;
+
+    let cand = scadenta(r.ultimaEfectuareLa, r.frecventaZile)!;
+
+    // O treabă restantă din trecut se arată acolo unde era de făcut, nu azi:
+    // altfel n-ai vedea de când stă.
+    let pasi = 0;
+    while (cand <= panaLa && pasi < 60) {
+      if (cand >= deLa) {
+        iesire.push({
+          id: r.id,
+          titlu: r.titlu,
+          zona: r.zona ?? "Casa",
+          minute: r.minuteEstimate,
+          ziua: cand,
+          intarziat: cand < ziua,
+        });
+      }
+      const d = new Date(`${cand}T12:00:00`);
+      d.setDate(d.getDate() + r.frecventaZile);
+      cand = azi(d);
+      pasi += 1;
+    }
+  }
+
+  return iesire;
+}
+
 /* ------------------------------------------------------- declutterul lunii */
 
 const cheieDeclutter = (luna: string) => `declutter:${luna}`;

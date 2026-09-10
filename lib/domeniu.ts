@@ -61,6 +61,8 @@ export type EvenimentAfisat = {
   notite: string | null;
   /** Câte zile mai sunt. Negativ = a trecut. */
   zilePanaLa: number | null;
+  /** Calendarul Google în care e oglindit, dacă cineva a cerut asta. */
+  googleCalendarId: string | null;
 };
 
 export type DateEveniment = {
@@ -71,6 +73,11 @@ export type DateEveniment = {
   recurentaLuni: number | null;
   remindereZileInainte: number;
   notite: string | null;
+  /**
+   * Calendarul Google în care să apară și el, dacă cineva a cerut asta explicit.
+   * Null înseamnă „rămâne doar în aplicație” — și ăsta e felul implicit.
+   */
+  googleCalendarId: string | null;
 };
 
 /* ------------------------------------------------------------ treburi */
@@ -93,3 +100,81 @@ export type DeclutterulLunii = {
   sarcinaId: number | null;
   facut: boolean;
 };
+
+/* ------------------------------------------------- calendarul Google */
+
+export type EvenimentGoogle = {
+  id: string;
+  /** Id-ul din Google. La cele de toată ziua, `id` are lipită și ziua. */
+  idGoogle: string;
+  titlu: string;
+  /** Ziua în care începe, „AAAA-LL-ZZ”, în ora României. */
+  ziua: string;
+  toataZiua: boolean;
+  /** „15:00”, sau null dacă ține toată ziua. */
+  ora: string | null;
+  oraSfarsit: string | null;
+  /** Minutul din zi la care începe și se termină — folosit la găsit ferestre libere. */
+  incepe: number | null;
+  seTermina: number | null;
+  /** Evenimentele marcate „Disponibil” în Google nu ocupă ziua. */
+  ocupa: boolean;
+};
+
+export type AgendaPersoanei = {
+  persoanaId: number;
+  nume: string;
+  calendarId: string | null;
+  evenimente: EvenimentGoogle[];
+  /** Ce s-a stricat, spus pe românește. Null dacă totul e în regulă. */
+  eroare: string | null;
+};
+
+/* --------------------------------------------------- propunerea zilei */
+
+export type PropunereaZilei = {
+  ziua: string;
+  esteMaine: boolean;
+  /** Ora la care încape, ca „17:30”. */
+  ora: string;
+  treaba: TreabaScadenta;
+  /**
+   * „propus” cere un răspuns; „acceptat” e ce ai hotărât deja azi și rămâne pe
+   * ecran până seara, ca să vezi la ce te-ai înhămat. Refuzul scoate cardul cu
+   * totul — asta a și cerut omul.
+   */
+  stare: "propus" | "acceptat";
+};
+
+/* ------------------------------------------------------- ziua din calendar */
+
+export type IntrareZi =
+  | { fel: "eveniment"; id: number; titlu: string; categorie: string; intarziat: boolean }
+  | { fel: "treaba"; id: number; titlu: string; zona: string; minute: number; intarziat: boolean }
+  | {
+      fel: "google";
+      id: string;
+      titlu: string;
+      persoanaId: number;
+      persoana: string;
+      ora: string | null;
+      oraSfarsit: string | null;
+    };
+
+export type ZiDinCalendar = {
+  ziua: string;
+  /** Ziua din lună, 1–31. */
+  numar: number;
+  esteAzi: boolean;
+  /** Zilele din lunile vecine, arătate palid ca să se închidă grila. */
+  altaLuna: boolean;
+  intrari: IntrareZi[];
+};
+
+/**
+ * Culoarea fiecărui om din casă, după poziția lui în listă. Nu e o culoare de
+ * stare: e o culoare de identitate, ca să știi a cui e dunga din calendar.
+ */
+export function culoareaPersoanei(pozitie: number) {
+  return ["var(--color-cobalt)", "var(--color-pruna)"][pozitie % 2];
+}

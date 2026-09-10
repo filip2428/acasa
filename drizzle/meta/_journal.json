@@ -15,6 +15,13 @@
       "when": 1789038254110,
       "tag": "0001_supreme_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789043495070,
+      "tag": "0002_puzzling_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

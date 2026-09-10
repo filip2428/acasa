@@ -6,6 +6,12 @@ import { db } from "@/lib/db";
 import { evenimente } from "@/lib/db/schema";
 import type { DateEveniment, EvenimentAfisat } from "@/lib/domeniu";
 import { azi } from "@/lib/formatare";
+import {
+  actualizeaza,
+  deCeNuSePoateScrie,
+  pune,
+  scoate as scoateDinGoogle,
+} from "@/lib/servicii/calendar-google";
 
 /*
   Calendarul casei: ITP, RCA, revizii, controale, documente care expiră.
@@ -65,6 +71,7 @@ export async function calendarulCasei(ziua = azi()): Promise<EvenimentAfisat[]> 
         remindereZileInainte: e.remindereZileInainte,
         notite: e.notite,
         zilePanaLa: scadenta ? zileIntre(ziua, scadenta) : null,
+        googleCalendarId: e.googleCalendarId,
       };
     })
     // Cele mai apropiate primele; cele fără dată, la coadă.
@@ -94,13 +101,83 @@ export async function salveazaEveniment(date: DateEveniment, persoanaId: number)
     creatDe: persoanaId,
   };
 
-  if (date.id) {
-    await db.update(evenimente).set(valori).where(eq(evenimente.id, date.id));
-    return date.id;
+  let id = date.id;
+  let vechi: typeof evenimente.$inferSelect | undefined;
+
+  if (id) {
+    [vechi] = await db.select().from(evenimente).where(eq(evenimente.id, id)).limit(1);
+    await db.update(evenimente).set(valori).where(eq(evenimente.id, id));
+  } else {
+    const [nou] = await db.insert(evenimente).values(valori).returning({ id: evenimente.id });
+    id = nou.id;
   }
 
-  const [nou] = await db.insert(evenimente).values(valori).returning({ id: evenimente.id });
-  return nou.id;
+  const avertisment = await sincronizeazaCuGoogle(id, {
+    titlu: valori.titlu,
+    ziua: scadentaEvenimentului(valori.data, valori.recurentaLuni, vechi?.ultimaEfectuareLa ?? null),
+    notite: valori.notite,
+    calendarNou: date.googleCalendarId,
+    calendarVechi: vechi?.googleCalendarId ?? null,
+    evenimentVechi: vechi?.googleEvenimentId ?? null,
+  });
+
+  return { id, avertisment };
+}
+
+/*
+  Oglindirea în Google.
+
+  Regula pe care o respectă tot ce urmează: baza de date a casei e adevărul, iar
+  Google e o copie de conveniență. Dacă scrierea în Google pică — calendar
+  partajat doar la citire, internet căzut — evenimentul rămâne salvat la noi și
+  ecranul spune ce s-a întâmplat. Nu pierdem nimic din ce a scris omul pentru că
+  n-a mers un serviciu din afară.
+*/
+async function sincronizeazaCuGoogle(
+  id: number,
+  d: {
+    titlu: string;
+    ziua: string | null;
+    notite: string | null;
+    calendarNou: string | null;
+    calendarVechi: string | null;
+    evenimentVechi: string | null;
+  },
+) {
+  const acelasi = d.calendarNou && d.calendarNou === d.calendarVechi && d.evenimentVechi;
+
+  try {
+    // A fost scos din Google, sau mutat în alt calendar: ștergem copia veche.
+    if (d.calendarVechi && d.evenimentVechi && !acelasi) {
+      await scoateDinGoogle(d.calendarVechi, d.evenimentVechi);
+      await db
+        .update(evenimente)
+        .set({ googleCalendarId: null, googleEvenimentId: null })
+        .where(eq(evenimente.id, id));
+    }
+
+    if (!d.calendarNou || !d.ziua) return null;
+
+    if (acelasi) {
+      await actualizeaza(d.calendarNou, d.evenimentVechi!, { titlu: d.titlu, ziua: d.ziua });
+      return null;
+    }
+
+    const googleId = await pune(d.calendarNou, {
+      titlu: d.titlu,
+      ziua: d.ziua,
+      notite: d.notite,
+    });
+
+    await db
+      .update(evenimente)
+      .set({ googleCalendarId: d.calendarNou, googleEvenimentId: googleId })
+      .where(eq(evenimente.id, id));
+
+    return null;
+  } catch (eroare) {
+    return `Salvat la noi, dar n-a ajuns în Google. ${deCeNuSePoateScrie(eroare)}`;
+  }
 }
 
 /**
@@ -116,12 +193,39 @@ export async function marcheazaEveniment(id: number, ziua = azi()) {
     return;
   }
 
+  const urmatoarea = adaugaLuni(ziua, eveniment.recurentaLuni);
+
   await db
     .update(evenimente)
-    .set({ ultimaEfectuareLa: ziua, data: adaugaLuni(ziua, eveniment.recurentaLuni) })
+    .set({ ultimaEfectuareLa: ziua, data: urmatoarea })
     .where(eq(evenimente.id, id));
+
+  // Dacă e trecut și în Google, se mută și acolo — altfel ar rămâne acolo o dată
+  // care nu mai e adevărată.
+  if (eveniment.googleCalendarId && eveniment.googleEvenimentId) {
+    try {
+      await actualizeaza(eveniment.googleCalendarId, eveniment.googleEvenimentId, {
+        ziua: urmatoarea,
+      });
+    } catch {
+      // Copia din Google rămâne în urmă; adevărul e la noi și se vede în aplicație.
+    }
+  }
 }
 
 export async function scoateEveniment(id: number) {
-  await db.update(evenimente).set({ activ: false }).where(eq(evenimente.id, id));
+  const [eveniment] = await db.select().from(evenimente).where(eq(evenimente.id, id)).limit(1);
+
+  await db
+    .update(evenimente)
+    .set({ activ: false, googleCalendarId: null, googleEvenimentId: null })
+    .where(eq(evenimente.id, id));
+
+  if (eveniment?.googleCalendarId && eveniment.googleEvenimentId) {
+    try {
+      await scoateDinGoogle(eveniment.googleCalendarId, eveniment.googleEvenimentId);
+    } catch {
+      // Dacă n-am putut șterge din Google, măcar la noi a dispărut.
+    }
+  }
 }

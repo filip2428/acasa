@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { persoane, remindere, setari } from "@/lib/db/schema";
+import { inRomania } from "@/lib/formatare";
 import { evenimenteDeAnuntat } from "@/lib/servicii/calendar-casa";
 import { ceExpira } from "@/lib/servicii/camara";
 import { declutterulLunii, treburiScadente } from "@/lib/servicii/planificator";
+import { propunereaZilei } from "@/lib/servicii/propuneri";
 import { instiinteaza } from "@/lib/servicii/push";
 
 /*
@@ -29,23 +31,6 @@ export const dynamic = "force-dynamic";
 // Ora la care pleacă rezumatul, în timpul României. Se schimbă din .env.local
 // dacă 8 dimineața e prea devreme sau prea târziu.
 const ORA_REZUMAT = Number(process.env.ORA_REZUMAT ?? 8);
-
-function acumInRomania() {
-  const formatat = new Intl.DateTimeFormat("ro-RO", {
-    timeZone: "Europe/Bucharest",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date());
-
-  const bucata = (tip: string) => formatat.find((p) => p.type === tip)?.value ?? "";
-  return {
-    ziua: `${bucata("year")}-${bucata("month")}-${bucata("day")}`,
-    ora: Number(bucata("hour")),
-  };
-}
 
 export async function GET(cerere: Request) {
   const cheieAsteptata = process.env.CHEIE_CRON;
@@ -92,9 +77,18 @@ async function trimiteRemindere() {
   return scadente.length;
 }
 
+/** „a trecut de termen”, „azi”, „mâine”, „în 5 zile”. */
+function cand(zilePanaLa: number | null) {
+  if (zilePanaLa == null) return "";
+  if (zilePanaLa < 0) return "a trecut de termen";
+  if (zilePanaLa === 0) return "azi";
+  if (zilePanaLa === 1) return "mâine";
+  return `în ${zilePanaLa} zile`;
+}
+
 /** Rezumatul zilei: ce a ajuns la scadență și ce zonă e la rând la declutter. */
 async function trimiteRezumatul() {
-  const { ziua, ora } = acumInRomania();
+  const { ziua, ora } = inRomania();
   if (ora !== ORA_REZUMAT) return { trimis: false, motiv: `nu e ora ${ORA_REZUMAT}` };
 
   const cheie = `rezumat:${ziua}`;
@@ -123,11 +117,7 @@ async function trimiteRezumatul() {
   }
 
   for (const eveniment of evenimente.slice(0, 2)) {
-    bucati.push(
-      eveniment.zilePanaLa != null && eveniment.zilePanaLa < 0
-        ? `${eveniment.titlu} a trecut de termen`
-        : `${eveniment.titlu} în ${eveniment.zilePanaLa} zile`,
-    );
+    bucati.push(`${eveniment.titlu} ${cand(eveniment.zilePanaLa)}`);
   }
 
   if (treburi.length > 0) {
@@ -149,17 +139,35 @@ async function trimiteRezumatul() {
     .where(eq(persoane.activ, true));
 
   let trimise = 0;
+  const texte: string[] = [];
+
   for (const persoana of toti) {
+    // Partea comună e aceeași pentru amândoi; propunerea e a fiecăruia, pentru
+    // că numai el are după-masa aia liberă.
+    const propunere = await propunereaZilei(persoana.id);
+    const text = [
+      ...bucati,
+      propunere && propunere.stare === "propus" && !propunere.esteMaine
+        ? `ai liber de la ${propunere.ora}: ${propunere.treaba.titlu.toLowerCase()}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
     const { trimise: cate } = await instiinteaza(persoana.id, {
       titlu: "Azi",
-      text: bucati.join(" · "),
+      text,
       cale: "/",
       eticheta: "rezumat",
     });
+
     trimise += cate;
+    texte.push(text);
   }
 
-  return { trimis: true, dispozitive: trimise, text: bucati.join(" · ") };
+  // Întoarcem și textele: la un cron care rulează la 8 dimineața, răspunsul e
+  // singurul loc din care se vede ce-a plecat, dacă cineva se plânge.
+  return { trimis: true, dispozitive: trimise, texte };
 }
 
 /** Ca să putem verifica ușor din browser că ruta trăiește. */

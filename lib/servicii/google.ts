@@ -27,6 +27,11 @@ export function areGoogle() {
   return Boolean(process.env.GOOGLE_EMAIL_SERVICIU && process.env.GOOGLE_CHEIE_PRIVATA);
 }
 
+/** Adresa cu care se partajează foaia și calendarele. O arătăm în Setări. */
+export function emailServiciu() {
+  return process.env.GOOGLE_EMAIL_SERVICIU ?? null;
+}
+
 function client() {
   if (clientCache) return clientCache;
 
@@ -62,8 +67,20 @@ export async function cereGoogle<T>(url: string, optiuni?: RequestInit): Promise
 
   if (!raspuns.ok) {
     const detaliu = await raspuns.text();
-    throw new Error(`Google a răspuns ${raspuns.status}: ${detaliu.slice(0, 300)}`);
+    const eroare = new Error(`Google a răspuns ${raspuns.status}: ${detaliu.slice(0, 300)}`);
+    // Codul contează la calendare: 404 înseamnă „nu e partajat cu noi”, iar 403
+    // „e partajat, dar doar la citire”. Sunt două lucruri de reparat diferit.
+    (eroare as EroareGoogle).cod = raspuns.status;
+    throw eroare;
   }
 
-  return raspuns.json() as Promise<T>;
+  // Ștergerile răspund cu 204 și corp gol; `json()` ar arunca pe ele.
+  const text = await raspuns.text();
+  return (text ? JSON.parse(text) : null) as T;
+}
+
+export type EroareGoogle = Error & { cod?: number };
+
+export function codulErorii(eroare: unknown) {
+  return eroare instanceof Error ? (eroare as EroareGoogle).cod : undefined;
 }

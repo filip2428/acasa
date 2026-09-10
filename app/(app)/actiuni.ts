@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { remindere } from "@/lib/db/schema";
 import { amanaDeclutterul, marcheazaFacut } from "@/lib/servicii/planificator";
+import { accepta, refuza } from "@/lib/servicii/propuneri";
 import { instiinteaza } from "@/lib/servicii/push";
 import { ceruteSesiune } from "@/lib/sesiune";
 
@@ -19,6 +20,33 @@ export async function bifeazaTreaba(sarcinaId: number) {
 export async function amanaZonaDeDeclutter() {
   await ceruteSesiune();
   await amanaDeclutterul();
+  revalidatePath("/");
+}
+
+/*
+  Propunerea zilei: „ai loc joi la 17:00, ce zici de aspirat?”. Răspunsul se ține
+  minte, ca să nu revină aceeași întrebare peste o oră.
+*/
+export async function punePropunereaInCalendar(propunere: {
+  sarcinaId: number;
+  titlu: string;
+  ziua: string;
+  ora: string;
+  minute: number;
+}) {
+  const sesiune = await ceruteSesiune();
+  const { avertisment } = await accepta(sesiune.persoanaId, propunere);
+
+  // Dinadins nu reîmprospătăm „Azi”: propunerea are răspuns acum, deci ar
+  // dispărea de sub deget înainte să apuci să citești confirmarea.
+  revalidatePath("/casa/calendar");
+
+  return avertisment ?? `Gata, e în calendarul tău la ${propunere.ora}.`;
+}
+
+export async function amanaPropunerea(sarcinaId: number) {
+  const sesiune = await ceruteSesiune();
+  await refuza(sesiune.persoanaId, sarcinaId);
   revalidatePath("/");
 }
 

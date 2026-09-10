@@ -4,9 +4,14 @@ import Antet from "@/componente/Antet";
 import Notificari from "@/componente/Notificari";
 import { lunaCurenta } from "@/lib/formatare";
 import { bugetulLunii } from "@/lib/servicii/buget";
-import { areGoogle } from "@/lib/servicii/google";
+import { areGoogle, emailServiciu } from "@/lib/servicii/google";
 import { cheiePublica } from "@/lib/servicii/push";
+import { db } from "@/lib/db";
+import { persoane } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { iesi, sesiuneCurenta } from "@/lib/sesiune";
+
+import CalendarulMeu from "./CalendarulMeu";
 
 export const metadata = { title: "Setări — Acasă" };
 
@@ -20,6 +25,14 @@ export default async function PaginaSetari() {
   const sesiune = await sesiuneCurenta();
   const conectatLaGoogle = areGoogle();
   const buget = conectatLaGoogle ? await bugetulLunii() : [];
+
+  const [eu] = sesiune
+    ? await db
+        .select({ calendarGoogleId: persoane.calendarGoogleId })
+        .from(persoane)
+        .where(eq(persoane.id, sesiune.persoanaId))
+        .limit(1)
+    : [];
 
   return (
     <main>
@@ -43,6 +56,16 @@ export default async function PaginaSetari() {
               serviciu.
             </p>
           )}
+        </section>
+
+        <section className="card p-4">
+          <h2 className="eticheta">Calendarul tău Google</h2>
+          <div className="mt-2">
+            <CalendarulMeu
+              calendarId={eu?.calendarGoogleId ?? null}
+              emailServiciu={conectatLaGoogle ? emailServiciu() : null}
+            />
+          </div>
         </section>
 
         <section className="card p-4">
