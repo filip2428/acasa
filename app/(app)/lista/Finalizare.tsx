@@ -14,10 +14,36 @@ import { finalizeazaLista, golesteBifate } from "./actiuni";
   bifate intră în istoric.
 */
 
-export default function Finalizare({ total, deBifat }: { total: number; deBifat: number }) {
+export default function Finalizare({
+  total,
+  deBifat,
+  areBuget,
+}: {
+  total: number;
+  deBifat: number;
+  areBuget: boolean;
+}) {
   const [deschis, setDeschis] = useState(false);
   const [totalReal, setTotalReal] = useState("");
+  const [inBuget, setInBuget] = useState(true);
+  const [raspuns, setRaspuns] = useState<string | null>(null);
   const [seTrimite, porneste] = useTransition();
+
+  if (raspuns) {
+    return (
+      <section className="card intra space-y-3 p-4">
+        <h2 className="titlu text-lg">Gata</h2>
+        <p className="text-[0.9375rem] leading-relaxed">{raspuns}</p>
+        <button
+          type="button"
+          className="buton buton-secundar w-full"
+          onClick={() => setRaspuns(null)}
+        >
+          Am înțeles
+        </button>
+      </section>
+    );
+  }
 
   if (!deschis) {
     return (
@@ -70,6 +96,24 @@ export default function Finalizare({ total, deBifat }: { total: number; deBifat:
         Estimarea noastră a fost {lei(total)}. Prețurile bifate intră în istoric.
       </p>
 
+      {areBuget && (
+        <label className="flex items-start gap-3 border-t border-[var(--color-linie)] pt-3">
+          <input
+            type="checkbox"
+            checked={inBuget}
+            onChange={(e) => setInBuget(e.target.checked)}
+            className="mt-0.5 size-5 shrink-0 accent-[var(--color-smalt)]"
+          />
+          <span className="text-sm leading-snug">
+            Trece în buget
+            <span className="block text-xs text-[var(--color-creion)]">
+              Împărțit pe categorii — mâncarea la Mâncare, detergentul la Curatenie. Dacă
+              scrii totalul de pe bon, se împarte exact suma aia.
+            </span>
+          </span>
+        </label>
+      )}
+
       <div className="flex gap-2 pt-1">
         <button
           type="button"
@@ -84,9 +128,13 @@ export default function Finalizare({ total, deBifat }: { total: number; deBifat:
           disabled={seTrimite}
           onClick={() =>
             porneste(async () => {
-              await finalizeazaLista(totalReal === "" ? null : Number(totalReal));
+              const rezultat = await finalizeazaLista(
+                totalReal === "" ? null : Number(totalReal),
+                inBuget,
+              );
               setDeschis(false);
               setTotalReal("");
+              setRaspuns(rezultat ?? "Lista e închisă. Prețurile au intrat în istoric.");
             })
           }
         >

@@ -103,40 +103,12 @@ export default function Zone({
                     ))}
                   </ul>
 
-                  <div className="flex flex-wrap gap-2 px-4 py-3">
-                    <button
-                      type="button"
-                      className="buton buton-mic buton-secundar"
-                      onClick={() => setFisa(sarcinaNoua(zona.id))}
-                    >
-                      Adaugă o treabă
-                    </button>
-                    <button
-                      type="button"
-                      className="buton buton-mic buton-secundar"
-                      onClick={() => {
-                        const nume = window.prompt("Cum se numește zona?", zona.nume);
-                        if (nume) porneste(() => redenumesteZona(zona.id, nume));
-                      }}
-                    >
-                      Redenumește
-                    </button>
-                    <button
-                      type="button"
-                      className="buton buton-mic buton-sters ml-auto"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Scoatem „${zona.nume}” împreună cu treburile ei? Istoricul rămâne.`,
-                          )
-                        ) {
-                          porneste(() => scoateZona(zona.id));
-                        }
-                      }}
-                    >
-                      Scoate zona
-                    </button>
-                  </div>
+                  <UneltelZonei
+                    zona={zona}
+                    laTreabaNoua={() => setFisa(sarcinaNoua(zona.id))}
+                    seLucreaza={seLucreaza}
+                    porneste={porneste}
+                  />
                 </div>
               )}
             </li>
@@ -176,5 +148,108 @@ export default function Zone({
         <FisaSarcina date={fisa} persoane={persoane} laInchidere={() => setFisa(null)} />
       )}
     </>
+  );
+}
+
+/*
+  Uneltele unei zone: adaugă o treabă, redenumește, scoate.
+
+  Redenumirea și confirmarea se fac în pagină, nu cu `prompt()` și `confirm()` —
+  alea nu merg deloc într-o aplicație instalată pe ecranul telefonului, iar acolo
+  unde merg arată a fereastră de browser, adică a altceva decât aplicația.
+*/
+function UneltelZonei({
+  zona,
+  laTreabaNoua,
+  seLucreaza,
+  porneste,
+}: {
+  zona: ZonaAfisata;
+  laTreabaNoua: () => void;
+  seLucreaza: boolean;
+  porneste: (actiune: () => void) => void;
+}) {
+  const [redenumire, setRedenumire] = useState<string | null>(null);
+  const [confirmaStergerea, setConfirmaStergerea] = useState(false);
+
+  if (redenumire !== null) {
+    return (
+      <form
+        className="flex gap-2 px-4 py-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const nume = redenumire.trim();
+          if (!nume) return;
+          porneste(async () => {
+            await redenumesteZona(zona.id, nume);
+            setRedenumire(null);
+          });
+        }}
+      >
+        <input
+          value={redenumire}
+          onChange={(e) => setRedenumire(e.target.value)}
+          className="camp flex-1"
+          aria-label={`Numele zonei ${zona.nume}`}
+          autoFocus
+        />
+        <button type="button" className="buton buton-secundar" onClick={() => setRedenumire(null)}>
+          Renunță
+        </button>
+        <button type="submit" className="buton buton-principal" disabled={seLucreaza}>
+          Salvează
+        </button>
+      </form>
+    );
+  }
+
+  if (confirmaStergerea) {
+    return (
+      <div className="px-4 py-3">
+        <p className="text-sm leading-snug">
+          Scoatem „{zona.nume}” cu tot cu treburile ei? Ce s-a făcut până acum rămâne
+          în istoric.
+        </p>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            className="buton buton-mic buton-secundar flex-1"
+            onClick={() => setConfirmaStergerea(false)}
+          >
+            Nu
+          </button>
+          <button
+            type="button"
+            className="buton buton-mic buton-principal flex-1"
+            disabled={seLucreaza}
+            onClick={() => porneste(() => scoateZona(zona.id))}
+          >
+            Scoate
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2 px-4 py-3">
+      <button type="button" className="buton buton-mic buton-secundar" onClick={laTreabaNoua}>
+        Adaugă o treabă
+      </button>
+      <button
+        type="button"
+        className="buton buton-mic buton-secundar"
+        onClick={() => setRedenumire(zona.nume)}
+      >
+        Redenumește
+      </button>
+      <button
+        type="button"
+        className="buton buton-mic buton-sters ml-auto"
+        onClick={() => setConfirmaStergerea(true)}
+      >
+        Scoate zona
+      </button>
+    </div>
   );
 }

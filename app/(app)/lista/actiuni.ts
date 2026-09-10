@@ -4,9 +4,11 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
-import { articoleLista, liste, produse } from "@/lib/db/schema";
+import { articoleLista, liste, magazine, produse } from "@/lib/db/schema";
 import { azi } from "@/lib/formatare";
-import { cautaProduse, listaCurenta } from "@/lib/servicii/lista";
+import { trimiteCheltuieli } from "@/lib/servicii/buget";
+import { areGoogle } from "@/lib/servicii/google";
+import { cautaProduse, listaCurenta, sumePentruBuget } from "@/lib/servicii/lista";
 import { ceruteSesiune } from "@/lib/sesiune";
 
 /*
@@ -119,11 +121,12 @@ export async function alegeMagazinul(magazinId: number | null) {
 }
 
 /**
- * Închide lista curentă. Prețurile bifate intră în istoric, iar produsele
- * își actualizează ultimul preț și data ultimei cumpărături.
+ * Închide lista curentă. Prețurile bifate intră în istoric, produsele își
+ * actualizează ultimul preț, iar cumpărăturile pot pleca direct în buget —
+ * împărțite pe categorii, ceea ce de mână n-ar face nimeni.
  */
-export async function finalizeazaLista(totalReal: number | null) {
-  await ceruteSesiune();
+export async function finalizeazaLista(totalReal: number | null, inBuget = true) {
+  const sesiune = await ceruteSesiune();
   const lista = await listaCurenta();
 
   const bifate = await db
@@ -150,8 +153,46 @@ export async function finalizeazaLista(totalReal: number | null) {
     .set({ finalizataLa: Math.floor(Date.now() / 1000), totalReal })
     .where(eq(liste.id, lista.id));
 
+  let raspunsBuget: string | null = null;
+
+  if (inBuget && areGoogle()) {
+    const sume = await sumePentruBuget(lista.id, totalReal);
+    if (sume.length > 0) {
+      const [magazin] = lista.magazinId
+        ? await db.select().from(magazine).where(eq(magazine.id, lista.magazinId)).limit(1)
+        : [];
+
+      const rezultat = await trimiteCheltuieli(
+        sume.map((s) => ({
+          data: ziua,
+          categorie: s.categorie,
+          suma: s.suma,
+          descriere: magazin?.nume ?? "Cumpărături",
+          sursa: "lista" as const,
+          listaId: lista.id,
+        })),
+        sesiune.persoanaId,
+      );
+
+      raspunsBuget = rezultat.reusit
+        ? `În buget au intrat ${sume.length === 1 ? "o categorie" : `${sume.length} categorii`}: ` +
+          sume.map((s) => `${s.categorie} ${s.suma.toFixed(2)}`).join(", ") + " lei."
+        : "Cumpărăturile s-au salvat, dar n-au ajuns în foaie. Le poți trimite din Bani.";
+
+      if (rezultat.reusit) {
+        await db
+          .update(liste)
+          .set({ trimisInBugetLa: Math.floor(Date.now() / 1000) })
+          .where(eq(liste.id, lista.id));
+      }
+    }
+  }
+
   revalidatePath("/lista");
+  revalidatePath("/bani");
   revalidatePath("/");
+
+  return raspunsBuget;
 }
 
 /** Folosită de câmpul de adăugare, care caută în timp ce scrii. */

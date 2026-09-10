@@ -8,6 +8,13 @@
       "when": 1789029170768,
       "tag": "0000_petite_daimon_hellstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789038254110,
+      "tag": "0001_supreme_havok",
+      "breakpoints": true
     }
   ]
 }

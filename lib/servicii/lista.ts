@@ -153,6 +153,60 @@ export async function categoriileActive() {
     .orderBy(asc(categorii.ordine), asc(categorii.nume));
 }
 
+/**
+ * Cât s-a strâns în coș, împărțit pe categoriile din buget.
+ *
+ * Dacă știm totalul real de pe bon, împărțim exact suma aia, proporțional cu
+ * estimările — altfel suma trecută în buget n-ar da niciodată cu bonul.
+ */
+export async function sumePentruBuget(listaId: number, totalReal: number | null) {
+  const randuri = await db
+    .select({
+      pret: articoleLista.pretEstimat,
+      cantitate: articoleLista.cantitate,
+      categorieBuget: categorii.categorieBuget,
+    })
+    .from(articoleLista)
+    .leftJoin(produse, eq(articoleLista.produsId, produse.id))
+    .leftJoin(categorii, eq(produse.categorieId, categorii.id))
+    .where(and(eq(articoleLista.listaId, listaId), eq(articoleLista.bifat, true)));
+
+  const peCategorie = new Map<string, number>();
+  let estimat = 0;
+
+  for (const rand of randuri) {
+    if (rand.pret == null) continue;
+    const valoare = rand.pret * rand.cantitate;
+    // Ce n-are categorie de buget intră tot la mâncare — e cazul obișnuit
+    // pentru ce scrii repede ca text liber la cumpărături.
+    const categorie = rand.categorieBuget ?? "Mâncare";
+    peCategorie.set(categorie, (peCategorie.get(categorie) ?? 0) + valoare);
+    estimat += valoare;
+  }
+
+  if (estimat === 0) return [];
+
+  const factor = totalReal != null && totalReal > 0 ? totalReal / estimat : 1;
+
+  const rezultat = [...peCategorie].map(([categorie, suma]) => ({
+    categorie,
+    suma: Math.round(suma * factor * 100) / 100,
+  }));
+
+  // Rotunjirile pot pierde un ban sau doi; îi punem pe categoria cea mai mare,
+  // ca suma trecută în buget să fie fix cât scrie pe bon.
+  if (totalReal != null && totalReal > 0) {
+    const diferenta =
+      Math.round((totalReal - rezultat.reduce((t, r) => t + r.suma, 0)) * 100) / 100;
+    if (diferenta !== 0) {
+      const ceaMare = rezultat.reduce((a, b) => (b.suma > a.suma ? b : a));
+      ceaMare.suma = Math.round((ceaMare.suma + diferenta) * 100) / 100;
+    }
+  }
+
+  return rezultat.filter((r) => r.suma > 0);
+}
+
 export async function magazinulListei(listaId: number) {
   const [rand] = await db
     .select({ magazinId: liste.magazinId })

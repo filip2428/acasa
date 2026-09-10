@@ -1,11 +1,12 @@
 import "server-only";
 
-import { eq, sql } from "drizzle-orm";
+import { desc, eq, isNull, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { bugetLunar } from "@/lib/db/schema";
+import { bugetLunar, tranzactii } from "@/lib/db/schema";
 import { lunaCurenta } from "@/lib/formatare";
 
+import { scrieTranzactii } from "./foaie-buget";
 import { areGoogle, cereGoogle } from "./google";
 
 /*
@@ -142,4 +143,160 @@ export async function bugetulLunii(luna = lunaCurenta()): Promise<RandBuget[]> {
 export async function categorieDinBuget(nume: string, luna = lunaCurenta()) {
   const toate = await bugetulLunii(luna);
   return toate.find((r) => r.categorie.toLowerCase() === nume.toLowerCase()) ?? null;
+}
+
+/* ------------------------------------------------------ scrisul în foaie */
+
+export type CheltuialaNoua = {
+  data: string;
+  categorie: string;
+  suma: number;
+  descriere?: string | null;
+  sursa?: "manual" | "lista" | "bon";
+  listaId?: number | null;
+  bonId?: number | null;
+};
+
+export type RezultatTrimitere = {
+  reusit: boolean;
+  cate: number;
+  foaieCreata: boolean;
+  avertisment: string | null;
+  eroare: string | null;
+};
+
+/**
+ * Trimite cheltuieli în foaia lunii și le ține și local.
+ *
+ * Le scriem întâi local, cu `trimisLa` gol. Dacă scrierea în foaie reușește, le
+ * marcăm trimise; dacă nu, rămân în aplicație cu eroarea lor și pot fi
+ * reîncercate — o cheltuială introdusă în magazin nu trebuie să se piardă doar
+ * pentru că nu era semnal.
+ */
+export async function trimiteCheltuieli(
+  cheltuieli: CheltuialaNoua[],
+  persoanaId: number,
+): Promise<RezultatTrimitere> {
+  if (cheltuieli.length === 0) {
+    return { reusit: true, cate: 0, foaieCreata: false, avertisment: null, eroare: null };
+  }
+
+  const luna = cheltuieli[0].data.slice(0, 7);
+
+  const inserate = await db
+    .insert(tranzactii)
+    .values(
+      cheltuieli.map((c) => ({
+        luna,
+        data: c.data,
+        categorie: c.categorie,
+        suma: c.suma,
+        descriere: c.descriere ?? null,
+        sursa: c.sursa ?? "manual",
+        listaId: c.listaId ?? null,
+        bonId: c.bonId ?? null,
+        adaugatDe: persoanaId,
+      })),
+    )
+    .returning({ id: tranzactii.id });
+
+  try {
+    const rezultat = await scrieTranzactii(
+      luna,
+      cheltuieli.map((c) => ({
+        data: c.data,
+        categorie: c.categorie,
+        suma: c.suma,
+        descriere: c.descriere,
+      })),
+    );
+
+    for (const [i, rand] of inserate.entries()) {
+      await db
+        .update(tranzactii)
+        .set({
+          trimisLa: Math.floor(Date.now() / 1000),
+          randSheet: rezultat.primulRand + i,
+          eroare: null,
+        })
+        .where(eq(tranzactii.id, rand.id));
+    }
+
+    // Copia locală a bugetului nu mai e actuală: forțăm recitirea.
+    await db.delete(bugetLunar).where(eq(bugetLunar.luna, luna));
+
+    return {
+      reusit: true,
+      cate: rezultat.cate,
+      foaieCreata: rezultat.foaieCreata,
+      avertisment: rezultat.avertisment,
+      eroare: null,
+    };
+  } catch (eroare) {
+    const mesaj = eroare instanceof Error ? eroare.message : String(eroare);
+    for (const rand of inserate) {
+      await db.update(tranzactii).set({ eroare: mesaj }).where(eq(tranzactii.id, rand.id));
+    }
+    console.error("Nu am putut scrie în foaia de buget:", eroare);
+    return { reusit: false, cate: 0, foaieCreata: false, avertisment: null, eroare: mesaj };
+  }
+}
+
+/** Cheltuielile trimise din aplicație, cele mai noi întâi. */
+export async function cheltuieliRecente(limita = 20) {
+  return db
+    .select()
+    .from(tranzactii)
+    .orderBy(desc(tranzactii.creatLa))
+    .limit(limita);
+}
+
+/** Cheltuieli rămase netrimise, ca să le putem reîncerca. */
+export async function cheltuieliNetrimise() {
+  return db.select().from(tranzactii).where(isNull(tranzactii.trimisLa));
+}
+
+/** Reîncearcă tot ce n-a plecat încă. */
+export async function reincearcaTrimiterea() {
+  const ramase = await cheltuieliNetrimise();
+  if (ramase.length === 0) return { cate: 0, eroare: null };
+
+  const peLuni = new Map<string, typeof ramase>();
+  for (const rand of ramase) {
+    peLuni.set(rand.luna, [...(peLuni.get(rand.luna) ?? []), rand]);
+  }
+
+  let trimise = 0;
+  for (const [luna, randuri] of peLuni) {
+    try {
+      const rezultat = await scrieTranzactii(
+        luna,
+        randuri.map((r) => ({
+          data: r.data,
+          categorie: r.categorie,
+          suma: r.suma,
+          descriere: r.descriere,
+        })),
+      );
+      for (const [i, rand] of randuri.entries()) {
+        await db
+          .update(tranzactii)
+          .set({
+            trimisLa: Math.floor(Date.now() / 1000),
+            randSheet: rezultat.primulRand + i,
+            eroare: null,
+          })
+          .where(eq(tranzactii.id, rand.id));
+      }
+      await db.delete(bugetLunar).where(eq(bugetLunar.luna, luna));
+      trimise += randuri.length;
+    } catch (eroare) {
+      return {
+        cate: trimise,
+        eroare: eroare instanceof Error ? eroare.message : String(eroare),
+      };
+    }
+  }
+
+  return { cate: trimise, eroare: null };
 }

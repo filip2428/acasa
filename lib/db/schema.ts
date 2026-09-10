@@ -487,6 +487,36 @@ export const bugetLunar = sqliteTable(
   (t) => [uniqueIndex("buget_luna_categorie").on(t.luna, t.categorie)],
 );
 
+/*
+  Oglinda locală a tranzacțiilor trimise în foaie.
+
+  Foaia rămâne sursa de adevăr; tabelul ăsta există ca să putem arăta imediat ce
+  s-a trimis din aplicație, fără să recitim sute de rânduri din Google la fiecare
+  deschidere de ecran, și ca să știm ce a mai rămas de trimis dacă pică internetul.
+*/
+export const tranzactii = sqliteTable(
+  "tranzactii",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    luna: text("luna").notNull(), // AAAA-LL
+    data: text("data").notNull(),
+    categorie: text("categorie").notNull(),
+    suma: real("suma").notNull(),
+    descriere: text("descriere"),
+    // manual | lista | bon
+    sursa: text("sursa").notNull().default("manual"),
+    listaId: integer("lista_id").references(() => liste.id),
+    bonId: integer("bon_id").references(() => bonuri.id),
+    adaugatDe: integer("adaugat_de").references(() => persoane.id),
+    // Rândul din foaie în care a fost scrisă; gol dacă n-a plecat încă.
+    randSheet: integer("rand_sheet"),
+    trimisLa: integer("trimis_la"),
+    eroare: text("eroare"),
+    creatLa: integer("creat_la").notNull().default(acum),
+  },
+  (t) => [index("tranzactii_luna").on(t.luna), index("tranzactii_trimis").on(t.trimisLa)],
+);
+
 export const setari = sqliteTable("setari", {
   cheie: text("cheie").primaryKey(),
   valoare: text("valoare", { mode: "json" }).notNull(),
