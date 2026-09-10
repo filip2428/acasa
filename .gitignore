@@ -6,3 +6,6 @@ local.db-*
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+*.json.key
+acasa-*.json
+*-service-account*.json

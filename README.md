@@ -58,3 +58,20 @@ categoriile lunii curente și, de la etapa 3, scrie înapoi rânduri de tranzac�
 6. Calendarul casei, dorințe, șabloane de bagaje, Siri Shortcuts.
 
 Schema bazei de date (`lib/db/schema.ts`) e scrisă din start pentru toate etapele.
+
+## Contul de serviciu Google
+
+Pentru buget (și, mai târziu, pentru calendare):
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → proiect nou, `acasa`.
+2. **API-uri și servicii → Bibliotecă** → activează **Google Sheets API** și
+   **Google Calendar API**.
+3. **IAM și administrare → Conturi de serviciu → Creează**. Nume `acasa`, fără roluri.
+4. Deschide contul creat → **Chei → Adaugă cheie → Creează cheie nouă → JSON**.
+   Se descarcă un fișier. Nu-l pune în git.
+5. `npm run google -- <calea către fișierul JSON>` — scrie singur cele două valori
+   în `.env.local`, cu cheia privată formatată cum trebuie.
+6. Partajează foaia `Buget_Familial` cu adresa contului de serviciu, ca **Editor**.
+   Adresa e afișată de script și arată a `acasa@....iam.gserviceaccount.com`.
+
+Contul de serviciu nu vede decât ce i-ai partajat explicit. Nu cere parola nimănui.

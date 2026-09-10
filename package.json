@@ -12,7 +12,8 @@
     "db:migrate": "tsx --env-file-if-exists=.env.local scripturi/migreaza.mts",
     "cod:nou": "tsx --env-file-if-exists=.env.local scripturi/cod-nou.mts",
     "date:demo": "tsx --env-file-if-exists=.env.local scripturi/date-demo.mts",
-    "icoane": "tsx scripturi/icoane.mts"
+    "icoane": "tsx scripturi/icoane.mts",
+    "google": "tsx scripturi/google.mts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
