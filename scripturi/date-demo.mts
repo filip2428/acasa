@@ -168,8 +168,28 @@ await db.insert(schema.produse).values([
   { nume: "Banane", categorieId: idCategorie("Legume și fructe"), unitate: "kg", pretUltim: 8.9, zileValabilitate: 6 },
   { nume: "Piept de pui", categorieId: idCategorie("Carne și pește"), unitate: "kg", pretUltim: 32.9, zileValabilitate: 3 },
   { nume: "Orez", categorieId: idCategorie("Băcănie"), unitate: "kg", pretUltim: 9.9, zileValabilitate: 720 },
+  { nume: "Ceapă", categorieId: idCategorie("Legume și fructe"), unitate: "kg", pretUltim: 4.5, zileValabilitate: 30 },
+  { nume: "Usturoi", categorieId: idCategorie("Legume și fructe"), unitate: "buc", pretUltim: 3.5, zileValabilitate: 60 },
+  { nume: "Cartofi", categorieId: idCategorie("Legume și fructe"), unitate: "kg", pretUltim: 4.9, zileValabilitate: 45 },
+  { nume: "Roșii", categorieId: idCategorie("Legume și fructe"), unitate: "kg", pretUltim: 9.9, zileValabilitate: 7 },
+  { nume: "Morcovi", categorieId: idCategorie("Legume și fructe"), unitate: "kg", pretUltim: 4.5, zileValabilitate: 21 },
+  { nume: "Smântână", categorieId: idCategorie("Lactate și ouă"), unitate: "buc", pretUltim: 7.9, zileValabilitate: 14 },
+  { nume: "Iaurt grecesc", categorieId: idCategorie("Lactate și ouă"), unitate: "buc", pretUltim: 8.5, zileValabilitate: 14 },
+  { nume: "Telemea", categorieId: idCategorie("Lactate și ouă"), unitate: "kg", pretUltim: 34.9, zileValabilitate: 21 },
+  { nume: "Paste", categorieId: idCategorie("Băcănie"), unitate: "buc", pretUltim: 6.5, zileValabilitate: 540 },
   { nume: "Detergent de vase", categorieId: idCategorie("Curățenie"), unitate: "buc", pretUltim: 18.5 },
   { nume: "Hârtie igienică", categorieId: idCategorie("Igienă"), unitate: "buc", pretUltim: 24.9 },
+
+  /*
+    Cele de mai jos sunt marcate „mereu în casă”: nu se trec niciodată la
+    „îți lipsește” când ne uităm dacă o rețetă se poate găti. Fără ele, orice
+    rețetă care cere sare ar părea imposibilă.
+  */
+  { nume: "Sare", categorieId: idCategorie("Băcănie"), unitate: "buc", pretUltim: 2.5, mereuInCasa: true },
+  { nume: "Piper", categorieId: idCategorie("Băcănie"), unitate: "buc", pretUltim: 7.9, mereuInCasa: true },
+  { nume: "Ulei de floarea-soarelui", categorieId: idCategorie("Băcănie"), unitate: "l", pretUltim: 9.9, mereuInCasa: true },
+  { nume: "Făină", categorieId: idCategorie("Băcănie"), unitate: "kg", pretUltim: 4.5, mereuInCasa: true },
+  { nume: "Zahăr", categorieId: idCategorie("Băcănie"), unitate: "kg", pretUltim: 5.5, mereuInCasa: true },
 ]);
 
 console.log("Gata. Codurile de acces — se afișează o singură dată:\n");

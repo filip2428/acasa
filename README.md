@@ -42,7 +42,7 @@ npm run cod:nou -- --id 1
 | Google Sheets | Bugetul lunar (`Buget_Familial`) | Partajezi foaia cu adresa contului de serviciu, ca **Editor** |
 | Google Calendar | Programul fiecăruia și ferestrele libere | Fiecare își leagă calendarul din **Setări**; partajare **doar citire** (sau „modificări la evenimente”, dacă vrei să poți scrie în el din aplicație) |
 | Open Food Facts | Nume și poză după codul de bare | Public, fără cont |
-| Cookidoo | Rețete și plan săptămânal (etapa 5) | Cont propriu, bibliotecă neoficială |
+| Cookidoo | Umple caietul de rețete (etapa 5) | Cont propriu, bibliotecă neoficială |
 
 Bugetul rămâne în foaia din Google — aplicația nu ține un buget paralel. Citește
 categoriile lunii curente și, de la etapa 3, scrie înapoi rânduri de tranzacție.
@@ -57,8 +57,8 @@ categoriile lunii curente și, de la etapa 3, scrie înapoi rânduri de tranzac�
    `ANTHROPIC_API_KEY`*.
 4. ~~Google Calendar și motorul de propuneri~~ **gata** — *fiecare trebuie să-și
    partajeze calendarul cu contul de serviciu și să-l lege din Setări*.
-5. Cookidoo, planificatorul de meniu, fazele ciclului, „ce gătim azi” — *are
-   nevoie de credențialele Cookidoo*.
+5. ~~Caietul de rețete, planul de mese, „ce gătim azi”~~ **gata** · sincronizarea
+   cu Cookidoo și fazele ciclului — *au nevoie de credențialele Cookidoo*.
 6. ~~Calendarul casei, dorințe, șabloane de bagaje~~ **gata** · Siri Shortcuts.
 
 Schema bazei de date (`lib/db/schema.ts`) e scrisă din start pentru toate etapele.
@@ -85,6 +85,41 @@ Pentru buget (și, mai târziu, pentru calendare):
    nu salvează nimic dacă n-a mers.
 
 Contul de serviciu nu vede decât ce i-ai partajat explicit. Nu cere parola nimănui.
+
+## Rețete și mese
+
+**Un singur caiet de rețete, cu mai multe origini.** Scrise de mână, aduse dintr-un
+link sau — când vor fi credențialele — sincronizate din Cookidoo. Nu există un
+sistem paralel „Cookidoo”, și dinadins: numai rețeta din aplicație poate ști ce e
+în cămară, ce stă să expire și cât costă ce-ți lipsește. Pașii de gătit rămân
+acolo unde sunt (la Cookidoo oricum gătești de pe Thermomix); aici ținem doar ce
+trebuie ca să știm dacă o poți face azi.
+
+Piesa care face totul să meargă e **legătura dintre ingredient și catalog**. Un
+ingredient scris „500 g piept de pui” se leagă singur de produsul din catalog,
+iar dacă nu-l nimerește se leagă cu un tap. De acolo încolo ies toate celelalte:
+„ai / lipsă”, lista de cumpărături cu prețuri, propunerea de meniu. Ingredientele
+nelegate rămân „neștiute” — nici „ai”, nici „lipsă”, pentru că n-avem de unde ști.
+
+Sarea, uleiul, făina sunt marcate `mereu_in_casa` și nu apar niciodată la lipsuri.
+Cantitățile **nu** se socotesc: rețeta cere 200 g, cămara zice „1 buc”, iar dintr-o
+înmulțire pripită ar ieși un „nu-ți ajunge” fals.
+
+### Ce gătim azi
+
+Ordinea în care se propun rețetele, cu ponderi explicite în
+`lib/servicii/socoteli-meniu.ts`:
+
+1. **ce stă să expire** — mâncarea aruncată nu se mai recuperează, o rețetă amânată
+   nu se pierde niciodată;
+2. **ce se poate face fără drum la magazin**;
+3. **ce n-ai mâncat de curând**;
+4. iar dacă ai ceva în calendar diseară, **ce e scurt** — și nu te mai trimitem și
+   la cumpărături.
+
+Propunerea vine cu motivul ei scris: *„Folosește smântâna, expiră mâine.”* Fără
+explicație ar fi o ghicitoare. Tace dacă masa e deja pusă în plan, dimineața
+devreme, și când tot ce are de propus începe cu un drum la magazin.
 
 ## Calendarul
 
@@ -123,6 +158,7 @@ dacă e doar la citire, aplicația spune exact asta și nu se preface că a mers
 |---|---|
 | **Azi** | Ce expiră, ce e în calendar, treburile scadente, declutterul lunii, lista, bugetul. Nimic care nu cere o decizie astăzi. |
 | **Listă** | Cumpărăturile, cu preț și total. De aici se ajunge la **Cămară** și la **Catalog**. |
+| **Mese** | Planul săptămânii, lipsurile pentru el, caietul de rețete. |
 | **Casa** | Zone și treburi · Calendar (grila lunii + listă pe categorii) · Dorințe · Bagaje. |
 | **Bani** | Cheltuieli manuale pe orice categorie din buget, plus starea lunii. |
 | **Setări** | Calendarul tău Google, notificări, starea legăturii cu bugetul, ieșire din cont. |
@@ -146,7 +182,7 @@ https://<adresa-aplicației>/api/cron?cheie=<CHEIE_CRON din .env.local>
 ## Probe
 
 ```bash
-npm run proba           # așezarea foii de buget și socotelile calendarului
+npm run proba           # foaia de buget, socotelile calendarului, alegerea meniului
 npm run proba:scriere   # în gol pe foaia reală: arată unde ar scrie, nu scrie
 ```
 

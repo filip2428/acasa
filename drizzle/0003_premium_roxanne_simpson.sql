@@ -1,0 +1,1 @@
+ALTER TABLE `produse` ADD `mereu_in_casa` integer DEFAULT false NOT NULL;

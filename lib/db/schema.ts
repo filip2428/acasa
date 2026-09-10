@@ -110,6 +110,9 @@ export const produse = sqliteTable(
     zileValabilitate: integer("zile_valabilitate"),
     // La cât timp îl cumpărăm de obicei; îl calculează aplicația din istoric.
     ritmZile: real("ritm_zile"),
+    // Sarea, uleiul, făina. Nu le trecem niciodată la „îți lipsește” când ne
+    // uităm dacă se poate găti o rețetă — altfel n-ai putea găti nimic.
+    mereuInCasa: integer("mereu_in_casa", { mode: "boolean" }).notNull().default(false),
     ultimaCumparareLa: text("ultima_cumparare_la"),
     arhivat: integer("arhivat", { mode: "boolean" }).notNull().default(false),
     creatLa: integer("creat_la").notNull().default(acum),

@@ -1,17 +1,20 @@
 import Link from "next/link";
 
 import Antet from "@/componente/Antet";
-import { candFataDeAzi, lei, ziLunga } from "@/lib/formatare";
+import { azi, candFataDeAzi, lei, ziLunga } from "@/lib/formatare";
 import { bugetulLunii } from "@/lib/servicii/buget";
 import { evenimenteDeAnuntat } from "@/lib/servicii/calendar-casa";
 import { ceExpira } from "@/lib/servicii/camara";
 import { persoaneleCasei } from "@/lib/servicii/casa";
 import { articoleleListei, listaCurenta, totaluri } from "@/lib/servicii/lista";
+import { masaDin } from "@/lib/servicii/retete";
+import { propunereaDeMeniu } from "@/lib/servicii/meniu";
 import { declutterulLunii, treburiScadente } from "@/lib/servicii/planificator";
 import { propunereaZilei } from "@/lib/servicii/propuneri";
 import { sesiuneCurenta } from "@/lib/sesiune";
 
 import Propunere from "./Propunere";
+import PropunereMasa from "./PropunereMasa";
 import Reminder from "./Reminder";
 import Treburi from "./Treburi";
 
@@ -40,8 +43,16 @@ export default async function PaginaAzi() {
   // Cu doi oameni în casă, „celălalt” e cel care nu sunt eu.
   const celalalt = persoane.find((p) => p.id !== sesiune?.persoanaId);
 
-  // Propunerea se uită în calendarul celui logat, deci se cere abia după sesiune.
-  const propunere = sesiune ? await propunereaZilei(sesiune.persoanaId) : null;
+  // Propunerile se uită în calendarul celui logat, deci se cer abia după sesiune.
+  const ziuaDeAzi = azi();
+  const cina = await masaDin(ziuaDeAzi, "cina");
+
+  const [propunere, masa] = sesiune
+    ? await Promise.all([
+        propunereaZilei(sesiune.persoanaId),
+        propunereaDeMeniu(sesiune.persoanaId, ziuaDeAzi, cina != null),
+      ])
+    : [null, null];
 
   const articole = await articoleleListei(lista.id);
   const sume = totaluri(articole);
@@ -95,6 +106,8 @@ export default async function PaginaAzi() {
             </ul>
           </Link>
         )}
+
+        {masa && <PropunereMasa propunere={masa} ziua={ziuaDeAzi} />}
 
         {propunere && <Propunere propunere={propunere} />}
 

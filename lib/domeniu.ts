@@ -178,3 +178,90 @@ export type ZiDinCalendar = {
 export function culoareaPersoanei(pozitie: number) {
   return ["var(--color-cobalt)", "var(--color-pruna)"][pozitie % 2];
 }
+
+/* -------------------------------------------------------------- rețete */
+
+export const MOMENTE = [
+  { valoare: "mic-dejun", eticheta: "Mic dejun" },
+  { valoare: "pranz", eticheta: "Prânz" },
+  { valoare: "cina", eticheta: "Cină" },
+] as const;
+
+export function etichetaMomentului(valoare: string) {
+  return MOMENTE.find((m) => m.valoare === valoare)?.eticheta ?? valoare;
+}
+
+/**
+ * Starea unui ingredient față de cămară.
+ *
+ * Nu socotim cantități: rețeta cere „200 g piept de pui”, cămara zice „1 buc”, iar
+ * dintr-o înmulțire pripită ar ieși un „nu-ți ajunge” greșit. Spunem doar dacă
+ * lucrul e sau nu în casă — atât putem ști sigur.
+ *
+ * „nestiut” e ingredientul nelegat încă de un produs din catalog (așa vin cele
+ * importate). Nu-l trecem nici la „ai”, nici la „lipsă”: n-avem de unde ști. Se
+ * leagă cu un tap, iar rețeta devine mai deșteaptă de fiecare dată.
+ */
+export type StareIngredient = "ai" | "mereu" | "lipsa" | "nestiut";
+
+export type IngredientAfisat = {
+  id: number;
+  textOriginal: string;
+  produsId: number | null;
+  nume: string;
+  cantitate: number | null;
+  unitate: string | null;
+  optional: boolean;
+  stare: StareIngredient;
+  /** Câte zile mai are în cămară, dacă e pe acolo și are dată. */
+  zilePanaLaExpirare: number | null;
+};
+
+export type RetetaAfisata = {
+  id: number;
+  titlu: string;
+  pozaUrl: string | null;
+  portii: number;
+  minuteTotal: number | null;
+  laTm6: boolean;
+  efort: string;
+  etichete: string[];
+  favorit: boolean;
+  sursa: string;
+  url: string | null;
+  instructiuni: string | null;
+  ingrediente: IngredientAfisat[];
+  /** Câte dintre ingredientele care contează sunt în casă, din câte. */
+  ai: number;
+  dinTotal: number;
+  /** Ce se folosește în ea și stă să expire — motivul cel mai bun de a o găti. */
+  expiraInEa: { nume: string; zile: number }[];
+  ultimaGatireLa: string | null;
+};
+
+export type PropunereMeniu = {
+  reteta: RetetaAfisata;
+  /** De ce tocmai asta. Explicația e jumătate din propunere. */
+  motiv: string;
+};
+
+export type MasaDinPlan = {
+  id: number;
+  data: string;
+  moment: string;
+  retetaId: number | null;
+  titlu: string;
+  gatitLa: number | null;
+};
+
+export type DateReteta = {
+  id?: number;
+  titlu: string;
+  portii: number;
+  minuteTotal: number | null;
+  laTm6: boolean;
+  efort: string;
+  url: string | null;
+  instructiuni: string | null;
+  etichete: string[];
+};

@@ -12,6 +12,7 @@ import { usePathname } from "next/navigation";
 const CAI = [
   { href: "/", eticheta: "Azi", icoana: IcoanaSoare },
   { href: "/lista", eticheta: "Listă", icoana: IcoanaLista },
+  { href: "/mese", eticheta: "Mese", icoana: IcoanaOala },
   { href: "/casa", eticheta: "Casa", icoana: IcoanaCasa },
   { href: "/bani", eticheta: "Bani", icoana: IcoanaBani },
   { href: "/setari", eticheta: "Setări", icoana: IcoanaSetari },
@@ -98,6 +99,19 @@ export function IcoanaCos() {
     <svg {...proprietatiIcoana}>
       <path d="M4 8h16l-1.4 10.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8Z" />
       <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    </svg>
+  );
+}
+
+// Oala de email, cu capac și cu toarte — obiectul de la care pleacă tot desenul
+// aplicației. Nicăieri altundeva nu apare atât de literal.
+function IcoanaOala() {
+  return (
+    <svg {...proprietatiIcoana}>
+      <path d="M4.5 9.5h15l-1 8.5a2 2 0 0 1-2 1.8H7.5a2 2 0 0 1-2-1.8Z" />
+      <path d="M3 9.5h18" />
+      <path d="M9 6.5h6" />
+      <path d="M12 4v2.5" />
     </svg>
   );
 }
