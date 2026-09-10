@@ -1,0 +1,275 @@
+@import "tailwindcss";
+
+/*
+  „Acasă” — sistemul vizual.
+
+  Ideea de la care pleacă tot: vasele de bucătărie emailate. Verde smalț adânc,
+  stropit fin cu alb, cu o margine mai închisă la fiecare muchie — exact cum are
+  o oală de email un inel întărit pe buză. Fundalul e verde-pal ca chitul dintre
+  faianțe, nu crem. Accentul e alama de la robinet și de la mânerele oalelor.
+
+  Regula de aur: suprafața emailată e singurul lucru zgomotos din aplicație.
+  Restul stă cuminte, ca să rămână ea memorabilă.
+*/
+
+@theme {
+  /* Verdele smalț: ancora. Antet, butoane principale, elementul activ din navigare. */
+  --color-smalt: #1f5138;
+  --color-smalt-adanc: #123626;
+  --color-smalt-viu: #2c6d4b;
+  --color-smalt-palid: #dde7de;
+
+  /* Fundalul: chitul dintre faianțe. Rece, verzui, niciodată crem. */
+  --color-chit: #edf0ea;
+  --color-portelan: #ffffff;
+
+  /* Alama de la robinet: pentru „azi”, pentru accente mici, niciodată pe suprafețe mari. */
+  --color-alama: #b8894a;
+  --color-alama-palid: #f3e7d5;
+
+  /* Cărămida: doar pentru ce e în întârziere sau expiră. Nu e culoare decorativă. */
+  --color-caramida: #c0533c;
+  --color-caramida-palid: #f9e4e0;
+
+  --color-cerneala: #1b2420;
+  --color-creion: #5f6b63;
+  --color-linie: #dfe4dc;
+
+  --font-titlu: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-cifre: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  /* iOS trage pagina în jos peste antet; culoarea de dedesubt trebuie să fie tot smalț. */
+  background-color: var(--color-smalt);
+}
+
+body {
+  background-color: var(--color-chit);
+  color: var(--color-cerneala);
+  font-family: var(--font-sans);
+  overscroll-behavior-y: none;
+}
+
+/* ------------------------------------------------------------- suprafața emailată */
+
+/*
+  Stropii sunt patru straturi de gradiente radiale cu perioade care nu se împart
+  între ele (37/53/29/43 px). Așa ochiul nu prinde tiparul care se repetă, deși
+  el se repetă — și nu încărcăm nicio imagine.
+*/
+.email {
+  background-color: var(--color-smalt);
+  background-image:
+    radial-gradient(circle at 18% 32%, rgb(255 255 255 / 0.1) 0 1.1px, transparent 1.2px),
+    radial-gradient(circle at 71% 64%, rgb(255 255 255 / 0.075) 0 1.5px, transparent 1.6px),
+    radial-gradient(circle at 43% 87%, rgb(0 0 0 / 0.12) 0 1.2px, transparent 1.3px),
+    radial-gradient(circle at 88% 14%, rgb(255 255 255 / 0.06) 0 1px, transparent 1.1px);
+  background-size: 37px 41px, 53px 47px, 29px 33px, 43px 39px;
+  color: var(--color-portelan);
+}
+
+/* Buza vasului: o dungă mai deschisă sus, una mai închisă jos. */
+.buza {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    inset 0 -1px 0 rgb(0 0 0 / 0.18);
+}
+
+/* --------------------------------------------------------------------- carduri */
+
+.card {
+  background-color: var(--color-portelan);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 1px 0 rgb(27 36 32 / 0.06),
+    0 2px 10px -6px rgb(27 36 32 / 0.22);
+}
+
+.card-lipit > * + * {
+  border-top: 1px solid var(--color-linie);
+}
+
+/* ------------------------------------------------------------- controale de bază */
+
+/*
+  16px la câmpuri nu e o alegere estetică: sub atât, Safari pe iPhone face zoom
+  automat când atingi câmpul și sare tot ecranul.
+*/
+.camp {
+  width: 100%;
+  min-height: 2.875rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-linie);
+  background-color: var(--color-portelan);
+  padding: 0.625rem 0.875rem;
+  font-size: 1rem;
+  color: var(--color-cerneala);
+  outline: none;
+}
+.camp::placeholder {
+  color: var(--color-creion);
+}
+.camp:focus-visible {
+  border-color: var(--color-smalt-viu);
+  box-shadow: 0 0 0 3px rgb(44 109 75 / 0.16);
+}
+
+select.camp {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235f6b63' stroke-width='2'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.25rem;
+}
+
+.buton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.875rem;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.125rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: transform 0.12s ease;
+}
+.buton:active {
+  transform: translateY(1px);
+}
+.buton:disabled {
+  opacity: 0.45;
+  transform: none;
+}
+.buton-principal {
+  background-color: var(--color-smalt);
+  color: var(--color-portelan);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 1px 0 var(--color-smalt-adanc);
+}
+.buton-secundar {
+  background-color: var(--color-portelan);
+  color: var(--color-cerneala);
+  border: 1px solid var(--color-linie);
+}
+.buton-sters {
+  color: var(--color-creion);
+}
+.buton-mic {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.625rem;
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-smalt-viu);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------- tipografie */
+
+.titlu {
+  font-family: var(--font-titlu);
+  font-weight: 600;
+  font-variation-settings: "SOFT" 40, "WONK" 1;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+/* Cifrele care contează — prețuri, totaluri, cantități — arată ca pe bon. */
+.cifre {
+  font-family: var(--font-cifre);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.eticheta {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-creion);
+}
+
+/* --------------------------------------------------------------------- fișe mici */
+
+.fisa {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  border-radius: 999px;
+  padding: 0.1875rem 0.5625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: var(--color-smalt-palid);
+  color: var(--color-smalt-adanc);
+}
+.fisa-alama {
+  background-color: var(--color-alama-palid);
+  color: #7a5626;
+}
+.fisa-caramida {
+  background-color: var(--color-caramida-palid);
+  color: #8c3626;
+}
+
+/* ------------------------------------------------------------ linia de rupere a bonului */
+
+/* Bonul se rupe pe linia perforată; totalul stă sub ea. */
+.rupere {
+  position: relative;
+  border-top: 1px dashed var(--color-linie);
+}
+.rupere::before,
+.rupere::after {
+  content: "";
+  position: absolute;
+  top: -0.4375rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 999px;
+  background-color: var(--color-chit);
+}
+.rupere::before {
+  left: -1.4375rem;
+}
+.rupere::after {
+  right: -1.4375rem;
+}
+
+/* ------------------------------------------------------------------------- diverse */
+
+/* Navigarea plutește peste conținut; lăsăm loc cât ea plus bara de sistem. */
+.zona-sigura-jos {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 6.75rem);
+}
+
+@keyframes intra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.intra {
+  animation: intra 0.24s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
