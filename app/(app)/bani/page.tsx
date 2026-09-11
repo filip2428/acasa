@@ -1,20 +1,37 @@
 import Antet from "@/componente/Antet";
 import { candFataDeAzi, lei, lunaCurenta } from "@/lib/formatare";
-import { bugetulLunii, cheltuieliRecente, cheltuieliNetrimise } from "@/lib/servicii/buget";
+import {
+  bugetulLunii,
+  cheltuieliNetrimise,
+  cheltuieliRecente,
+  ultimaCitire,
+  verificaFoaia,
+} from "@/lib/servicii/buget";
 import { areGoogle } from "@/lib/servicii/google";
 
 import FormularCheltuiala from "./FormularCheltuiala";
 import Netrimise from "./Netrimise";
+import Reimprospateaza from "./Reimprospateaza";
 
 export const metadata = { title: "Bani — Acasă" };
 
 export default async function PaginaBani() {
   const conectat = areGoogle();
-  const [buget, recente, netrimise] = await Promise.all([
+  const [bugetCitit, recente, netrimise] = await Promise.all([
     conectat ? bugetulLunii() : Promise.resolve([]),
     cheltuieliRecente(12),
     cheltuieliNetrimise(),
   ]);
+
+  // Gol deși e legat înseamnă aproape sigur că citirea din Google a picat. Aflăm
+  // de ce, ca ecranul să spună ce e de reparat în loc să tacă.
+  const stareaFoii = conectat && bugetCitit.length === 0 ? await verificaFoaia() : null;
+  const buget = stareaFoii?.ok ? await bugetulLunii() : bugetCitit;
+
+  const cititLa = buget.length > 0 ? await ultimaCitire() : null;
+  const minute = cititLa ? Math.max(0, Math.round((Date.now() / 1000 - cititLa) / 60)) : null;
+  const eticheta =
+    minute == null ? undefined : minute < 1 ? "citit acum" : `citit acum ${minute} min`;
 
   const categorii = buget.map((r) => r.categorie);
   const cuPlan = buget.filter((r) => r.planificat > 0 || r.real > 0);
@@ -50,6 +67,18 @@ export default async function PaginaBani() {
           />
         )}
 
+        {stareaFoii && !stareaFoii.ok && (
+          <section className="card p-4">
+            <h2 className="titlu text-lg">Nu pot citi foaia de buget</h2>
+            <p className="mt-2 text-[0.9375rem] leading-relaxed text-[var(--color-creion)]">
+              {stareaFoii.motiv}
+            </p>
+            <div className="mt-3">
+              <Reimprospateaza />
+            </div>
+          </section>
+        )}
+
         {netrimise.length > 0 && <Netrimise cate={netrimise.length} />}
 
         {recente.length > 0 && (
@@ -77,7 +106,10 @@ export default async function PaginaBani() {
 
         {cuPlan.length > 0 && (
           <section>
-            <h2 className="eticheta mb-1.5 px-1">Toate categoriile</h2>
+            <div className="mb-1.5 flex items-baseline justify-between gap-3 px-1">
+              <h2 className="eticheta">Toate categoriile</h2>
+              <Reimprospateaza eticheta={eticheta} mic />
+            </div>
             <ul className="card space-y-3 p-4">
               {cuPlan.map((rand) => {
                 const procent =

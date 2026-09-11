@@ -1,13 +1,13 @@
 import "server-only";
 
-import { desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, notInArray, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { bugetLunar, tranzactii } from "@/lib/db/schema";
 import { lunaCurenta } from "@/lib/formatare";
 
 import { scrieTranzactii } from "./foaie-buget";
-import { areGoogle, cereGoogle } from "./google";
+import { areGoogle, cereGoogle, codulErorii } from "./google";
 
 /*
   Citirea bugetului din foaia Buget_Familial.
@@ -81,62 +81,134 @@ async function citesteDinSheets(luna: string): Promise<RandBuget[]> {
   return rezultat;
 }
 
-/**
- * Bugetul lunii, din copia locală. Reîmprospătează din Google dacă e mai veche
- * de o jumătate de oră, iar dacă Google nu răspunde, întoarce ce avea.
- */
-export async function bugetulLunii(luna = lunaCurenta()): Promise<RandBuget[]> {
-  const local = await db.select().from(bugetLunar).where(eq(bugetLunar.luna, luna));
-
-  const prospat =
-    local.length > 0 &&
-    local.every(
-      (r) => Date.now() / 1000 - r.actualizatLa < MINUTE_PROSPATIME * 60,
-    );
-
-  if (prospat) {
-    return local.map((r) => ({
-      categorie: r.categorie,
-      planificat: r.planificat,
-      real: r.real,
-      ramas: r.planificat - r.real,
-    }));
+/** Scrie copia locală a lunii și scoate categoriile care nu mai sunt în foaie. */
+async function salveazaCopia(luna: string, randuri: RandBuget[]) {
+  for (const rand of randuri) {
+    await db
+      .insert(bugetLunar)
+      .values({ luna, categorie: rand.categorie, planificat: rand.planificat, real: rand.real })
+      .onConflictDoUpdate({
+        target: [bugetLunar.luna, bugetLunar.categorie],
+        set: { planificat: rand.planificat, real: rand.real, actualizatLa: sql`(unixepoch())` },
+      });
   }
 
-  try {
-    const proaspat = await citesteDinSheets(luna);
-    if (proaspat.length > 0) {
-      for (const rand of proaspat) {
-        await db
-          .insert(bugetLunar)
-          .values({
-            luna,
-            categorie: rand.categorie,
-            planificat: rand.planificat,
-            real: rand.real,
-          })
-          .onConflictDoUpdate({
-            target: [bugetLunar.luna, bugetLunar.categorie],
-            set: {
-              planificat: rand.planificat,
-              real: rand.real,
-              actualizatLa: sql`(unixepoch())`,
-            },
-          });
-      }
-      return proaspat;
-    }
-  } catch (eroare) {
-    // Bugetul e informativ; dacă Google e indisponibil, aplicația merge mai departe.
-    console.error("Nu am putut citi bugetul din Google Sheets:", eroare);
-  }
+  // O categorie redenumită în foaie ar rămâne altfel pe ecran la nesfârșit.
+  await db.delete(bugetLunar).where(
+    and(
+      eq(bugetLunar.luna, luna),
+      notInArray(
+        bugetLunar.categorie,
+        randuri.map((r) => r.categorie),
+      ),
+    ),
+  );
+}
 
-  return local.map((r) => ({
+const dinCopie = (randuri: (typeof bugetLunar.$inferSelect)[]): RandBuget[] =>
+  randuri.map((r) => ({
     categorie: r.categorie,
     planificat: r.planificat,
     real: r.real,
     ramas: r.planificat - r.real,
   }));
+
+/**
+ * Bugetul lunii, din copia locală. Reîmprospătează din Google dacă e mai veche
+ * de o jumătate de oră — sau oricând, cu `fortat` — iar dacă Google nu răspunde,
+ * întoarce ce avea.
+ *
+ * Nu există un ceas care să sincronizeze foaia în fundal: citirea se face atunci
+ * când un ecran are nevoie de buget și copia e veche.
+ */
+export async function bugetulLunii(
+  luna = lunaCurenta(),
+  { fortat = false }: { fortat?: boolean } = {},
+): Promise<RandBuget[]> {
+  const local = await db.select().from(bugetLunar).where(eq(bugetLunar.luna, luna));
+
+  const prospat =
+    !fortat &&
+    local.length > 0 &&
+    local.every((r) => Date.now() / 1000 - r.actualizatLa < MINUTE_PROSPATIME * 60);
+
+  if (prospat) return dinCopie(local);
+
+  try {
+    const proaspat = await citesteDinSheets(luna);
+    if (proaspat.length > 0) {
+      await salveazaCopia(luna, proaspat);
+      return proaspat;
+    }
+  } catch (eroare) {
+    // Bugetul e informativ; dacă Google e indisponibil, aplicația merge mai departe.
+    // Motivul exact îl spune `verificaFoaia`, pe ecranele care au de ce să-l arate.
+    console.error("Nu am putut citi bugetul din Google Sheets:", eroare);
+  }
+
+  return dinCopie(local);
+}
+
+/** Când s-a citit ultima dată din foaie, în secunde. Null dacă niciodată. */
+export async function ultimaCitire(luna = lunaCurenta()) {
+  const [rand] = await db
+    .select({ la: sql<number | null>`max(${bugetLunar.actualizatLa})` })
+    .from(bugetLunar)
+    .where(eq(bugetLunar.luna, luna));
+  return rand?.la ?? null;
+}
+
+export type StareaFoii = { ok: true; categorii: number } | { ok: false; motiv: string };
+
+/** Traduce ce a răspuns Google în ce e de reparat, și unde. */
+function explicaEroarea(eroare: unknown, luna: string) {
+  const cod = codulErorii(eroare);
+  const text = eroare instanceof Error ? eroare.message : String(eroare);
+
+  if (/DECODER|PEM|asn1|private key|No key or keyFile/i.test(text)) {
+    return "Cheia contului de serviciu nu se poate citi. Pe Vercel, GOOGLE_CHEIE_PRIVATA trebuie copiată întreagă, de la -----BEGIN PRIVATE KEY----- până la -----END PRIVATE KEY-----.";
+  }
+  if (/invalid_grant|unauthorized_client|invalid_client/i.test(text)) {
+    return "Google nu recunoaște contul de serviciu. Verifică pe Vercel că GOOGLE_EMAIL_SERVICIU și GOOGLE_CHEIE_PRIVATA sunt din același fișier JSON.";
+  }
+  if (cod === 403) {
+    return "Google refuză accesul la foaie. Buget_Familial trebuie partajată cu adresa contului de serviciu, ca Editor.";
+  }
+  if (cod === 404) {
+    return "Google nu găsește foaia. Verifică BUGET_SHEET_ID pe Vercel.";
+  }
+  if (cod === 400 && /parse range/i.test(text)) {
+    return `Foaia n-are fila „${luna}”. Se creează singură la prima cheltuială trecută din aplicație, sau o poți duplica din „Șablon Lunar”.`;
+  }
+  return `Google a răspuns cu o eroare: ${text.slice(0, 180)}`;
+}
+
+/**
+ * Citește foaia acum, ocolind copia, și spune ce a găsit — sau de ce n-a mers.
+ * Stă în spatele butonului „reîmprospătează” și al verificării din Setări.
+ */
+export async function verificaFoaia(luna = lunaCurenta()): Promise<StareaFoii> {
+  if (!areGoogle()) {
+    return { ok: false, motiv: "Lipsesc GOOGLE_EMAIL_SERVICIU sau GOOGLE_CHEIE_PRIVATA." };
+  }
+  if (!process.env.BUGET_SHEET_ID) {
+    return { ok: false, motiv: "Lipsește BUGET_SHEET_ID." };
+  }
+
+  try {
+    const randuri = await citesteDinSheets(luna);
+    if (randuri.length === 0) {
+      return {
+        ok: false,
+        motiv: `Am deschis fila „${luna}”, dar n-am găsit tabelul care începe cu „Categorie | Tip”.`,
+      };
+    }
+    await salveazaCopia(luna, randuri);
+    return { ok: true, categorii: randuri.length };
+  } catch (eroare) {
+    console.error("Verificarea foii de buget a picat:", eroare);
+    return { ok: false, motiv: explicaEroarea(eroare, luna) };
+  }
 }
 
 /** O singură categorie, pentru banda de sus din lista de cumpărături. */

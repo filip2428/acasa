@@ -43,8 +43,10 @@ function client() {
 
   clientCache = new JWT({
     email,
-    // În fișierele .env cheia stă pe o linie, cu „\n” scris ca text.
-    key: cheie.replace(/\\n/g, "\n"),
+    // În fișierele .env cheia stă pe o linie, cu „\n” scris ca text. Pe Vercel se
+    // lipește ușor cu tot cu ghilimelele din .env.local — le scoatem, altfel cheia
+    // nu mai e o cheie și Google refuză fără să spună de ce.
+    key: cheie.trim().replace(/^["']|["']$/g, "").replace(/\\n/g, "\n"),
     scopes: DOMENII,
   });
 

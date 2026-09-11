@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Antet from "@/componente/Antet";
 import Notificari from "@/componente/Notificari";
 import { lunaCurenta } from "@/lib/formatare";
-import { bugetulLunii } from "@/lib/servicii/buget";
+import { verificaFoaia } from "@/lib/servicii/buget";
 import { areGoogle, emailServiciu } from "@/lib/servicii/google";
 import { cheiePublica } from "@/lib/servicii/push";
 import { db } from "@/lib/db";
@@ -24,7 +24,9 @@ async function deconecteaza() {
 export default async function PaginaSetari() {
   const sesiune = await sesiuneCurenta();
   const conectatLaGoogle = areGoogle();
-  const buget = conectatLaGoogle ? await bugetulLunii() : [];
+  // O citire adevărată, nu doar „variabilele există”: altfel Setările ar spune
+  // „legat” exact când foaia nu se poate citi.
+  const foaia = conectatLaGoogle ? await verificaFoaia() : null;
 
   const [eu] = sesiune
     ? await db
@@ -42,12 +44,16 @@ export default async function PaginaSetari() {
         <section className="card p-4">
           <h2 className="eticheta">Bugetul</h2>
           {conectatLaGoogle ? (
-            <p className="mt-2 text-[0.9375rem] leading-relaxed">
-              Citim foaia <strong>{lunaCurenta()}</strong> din Buget_Familial.{" "}
-              {buget.length > 0
-                ? `Am găsit ${buget.length} categorii.`
-                : "Foaia lunii curente n-are încă rânduri de cheltuieli."}
-            </p>
+            foaia?.ok ? (
+              <p className="mt-2 text-[0.9375rem] leading-relaxed">
+                Citim foaia <strong>{lunaCurenta()}</strong> din Buget_Familial. Am găsit{" "}
+                {foaia.categorii} categorii.
+              </p>
+            ) : (
+              <p className="mt-2 rounded-xl bg-[var(--color-caramida-palid)] p-3 text-sm leading-relaxed text-[#8c3626]">
+                {foaia?.motiv}
+              </p>
+            )
           ) : (
             <p className="mt-2 text-[0.9375rem] leading-relaxed text-[var(--color-creion)]">
               Nu e legat de Google. Completează <code className="cifre">GOOGLE_EMAIL_SERVICIU</code>{" "}

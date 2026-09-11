@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 import {
   reincearcaTrimiterea,
   trimiteCheltuieli,
+  verificaFoaia,
   type RezultatTrimitere,
+  type StareaFoii,
 } from "@/lib/servicii/buget";
 import { ceruteSesiune } from "@/lib/sesiune";
 
@@ -65,4 +67,14 @@ export async function reincearca() {
   const rezultat = await reincearcaTrimiterea();
   revalidatePath("/bani");
   return rezultat;
+}
+
+/** Recitește foaia acum, fără să aștepte să se învechească copia. */
+export async function reimprospateazaBugetul(): Promise<StareaFoii> {
+  await ceruteSesiune();
+  const stare = await verificaFoaia();
+  revalidatePath("/bani");
+  revalidatePath("/lista");
+  revalidatePath("/");
+  return stare;
 }
