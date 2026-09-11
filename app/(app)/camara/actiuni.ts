@@ -13,6 +13,7 @@ export async function propuneExpirarea(produsId: number) {
 export async function puneInCamara(intrare: {
   produsId: number;
   cantitate: number;
+  unitate: string;
   loc: string;
   expiraLa: string | null;
 }) {
@@ -29,9 +30,9 @@ export async function scoateDinCamara(id: number) {
   revalidatePath("/");
 }
 
-export async function schimbaCat(id: number, cantitate: number) {
+export async function schimbaCat(id: number, cantitate: number, unitate?: string) {
   await ceruteSesiune();
-  await schimbaCantitatea(id, cantitate);
+  await schimbaCantitatea(id, cantitate, unitate);
   revalidatePath("/camara");
   revalidatePath("/");
 }

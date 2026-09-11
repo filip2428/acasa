@@ -114,9 +114,12 @@ export async function scoate(id: number) {
     .where(eq(stoc.id, id));
 }
 
-export async function schimbaCantitatea(id: number, cantitate: number) {
+export async function schimbaCantitatea(id: number, cantitate: number, unitate?: string) {
   if (cantitate <= 0) return scoate(id);
-  await db.update(stoc).set({ cantitate }).where(eq(stoc.id, id));
+  await db
+    .update(stoc)
+    .set(unitate ? { cantitate, unitate } : { cantitate })
+    .where(eq(stoc.id, id));
 }
 
 /** Câte lucruri sunt în fiecare loc — pentru cifrele de pe ecranul cămării. */

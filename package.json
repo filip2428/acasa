@@ -14,7 +14,7 @@
     "date:demo": "tsx --env-file-if-exists=.env.local scripturi/date-demo.mts",
     "icoane": "tsx scripturi/icoane.mts",
     "google": "tsx scripturi/google.mts",
-    "proba": "tsx scripturi/proba-foaie.mts && tsx scripturi/proba-calendar.mts && tsx scripturi/proba-meniu.mts",
+    "proba": "tsx scripturi/proba-foaie.mts && tsx scripturi/proba-calendar.mts && tsx scripturi/proba-meniu.mts && tsx scripturi/proba-unitati.mts",
     "proba:scriere": "tsx --conditions=react-server --env-file-if-exists=.env.local scripturi/proba-scriere.mts"
   },
   "dependencies": {

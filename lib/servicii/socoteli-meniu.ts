@@ -132,12 +132,5 @@ export function textIngredient(nume: string, cantitate: number | null, unitate: 
   return `${scrieCantitatea(cantitate, unitate ?? "buc")} ${mic}`;
 }
 
-/** Unitățile în care se scriu rețetele, nu cele în care se cumpără. */
-export const UNITATI_RETETA = ["g", "kg", "ml", "l", "buc", "linguri", "linguriță", "cană"] as const;
-
-/** Produsul se cumpără la kilogram, dar în rețetă se cântărește în grame. */
-export function unitateaDeReteta(unitateaProdusului: string) {
-  if (unitateaProdusului === "kg") return "g";
-  if (unitateaProdusului === "l") return "ml";
-  return unitateaProdusului;
-}
+// Unitățile stau acum în lib/unitati.ts, împărțite cu cămara.
+export { UNITATI_RETETA, unitateaDeReteta } from "@/lib/unitati";
