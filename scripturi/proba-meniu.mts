@@ -98,6 +98,18 @@ assert.ok(
   "într-o seară plină nu te trimitem și la magazin",
 );
 
+/* --------------------------------------------------------- faza ciclului */
+
+assert.ok(
+  scorulRetetei(cu({ potrivitaFazei: true, lipsuri: 1 })) > scorulRetetei(cu({ lipsuri: 0 })),
+  "în faza potrivită, o rețetă cu fier trece înaintea uneia oarecare",
+);
+
+assert.ok(
+  scorulRetetei(cu({ expiraInEa: 1, lipsuri: 1 })) > scorulRetetei(cu({ potrivitaFazei: true, lipsuri: 1 })),
+  "mâncarea care expiră rămâne pe primul loc",
+);
+
 /* ------------------------------------------------------------- motivele */
 
 assert.equal(
@@ -120,6 +132,23 @@ assert.equal(
 );
 
 assert.equal(motivulPropunerii(cu({ lipsuri: 0 }), {}), "Ai tot ce trebuie în casă");
+
+assert.equal(
+  motivulPropunerii(cu({ lipsuri: 0, potrivitaFazei: true }), {
+    motivFazei: "Bogată în fier, prinde bine zilele astea",
+  }),
+  "Bogată în fier, prinde bine zilele astea",
+  "faza se spune înaintea lui „ai tot”",
+);
+
+assert.equal(
+  motivulPropunerii(cu({ expiraInEa: 1, potrivitaFazei: true }), {
+    primulCareExpira: { nume: "Smântână", zile: 1 },
+    motivFazei: "Bogată în fier, prinde bine zilele astea",
+  }),
+  "Folosește smântână, expiră mâine",
+  "dar după ce expiră",
+);
 
 assert.equal(
   motivulPropunerii(cu({ lipsuri: 0, searaOcupata: true, minuteTotal: 20 }), {}),

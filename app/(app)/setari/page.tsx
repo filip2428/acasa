@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import Antet from "@/componente/Antet";
@@ -72,6 +73,18 @@ export default async function PaginaSetari() {
               emailServiciu={conectatLaGoogle ? emailServiciu() : null}
             />
           </div>
+        </section>
+
+        <section className="card p-4">
+          <h2 className="eticheta">Ciclul</h2>
+          <p className="mt-2 text-[0.9375rem] leading-relaxed">
+            Din zilele în care începe menstruația, aplicația socotește faza, pune în față
+            rețete potrivite și sare peste treburile grele în zilele cu menstruație. Se vede
+            de amândoi.
+          </p>
+          <Link href="/ciclu" className="buton buton-secundar buton-mic mt-3 w-full">
+            Deschide ciclul
+          </Link>
         </section>
 
         <section className="card p-4">

@@ -11,6 +11,7 @@ import {
   evenimenteGoogle,
   puneLaOra,
 } from "@/lib/servicii/calendar-google";
+import { stareaPersoanei } from "@/lib/servicii/ciclu";
 import { areGoogle } from "@/lib/servicii/google";
 import { treburiScadente } from "@/lib/servicii/planificator";
 import { candIncape, ceas, sfertulUrmator } from "@/lib/servicii/socoteli-calendar";
@@ -107,7 +108,15 @@ export async function propunereaZilei(
   const tinta = esteMaine ? deplaseaza(ziua, 1) : ziua;
 
   const treburi = await treburiScadente(ziua);
-  const alePersoanei = treburi.filter((t) => !t.atribuitLui || t.atribuitLui === persoanaId);
+  const ciclul = await stareaPersoanei(persoanaId, tinta);
+
+  // Treburile marcate „nu o propune în zilele cu menstruație” rămân pe listă, dar
+  // nu le propunem noi atunci — exact cum promite bifa din fișa treburii.
+  const alePersoanei = treburi.filter(
+    (t) =>
+      (!t.atribuitLui || t.atribuitLui === persoanaId) &&
+      !(ciclul?.faza === "menstruala" && t.evitaLaMenstruatie),
+  );
   if (alePersoanei.length === 0) return null;
 
   let program: EvenimentGoogle[];

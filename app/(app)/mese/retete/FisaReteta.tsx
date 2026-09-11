@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import type { DateReteta } from "@/lib/domeniu";
+import { ETICHETE_NUTRITIE } from "@/lib/servicii/socoteli-ciclu";
 
 import { salveaza } from "../actiuni";
 
@@ -135,6 +136,34 @@ export default function FisaReteta({
           />
           <span className="text-[0.9375rem]">Se face la Thermomix</span>
         </label>
+
+        <fieldset className="mt-3">
+          <legend className="eticheta">Ce aduce</legend>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {ETICHETE_NUTRITIE.map((e) => {
+              const are = date.etichete.includes(e.valoare);
+              return (
+                <button
+                  key={e.valoare}
+                  type="button"
+                  aria-pressed={are}
+                  onClick={() =>
+                    schimba(
+                      "etichete",
+                      are ? date.etichete.filter((x) => x !== e.valoare) : [...date.etichete, e.valoare],
+                    )
+                  }
+                  className={`buton buton-mic ${are ? "buton-principal" : "buton-secundar"}`}
+                >
+                  {e.eticheta}
+                </button>
+              );
+            })}
+          </div>
+          <span className="mt-1 block text-xs leading-relaxed text-[var(--color-creion)]">
+            Urcă în propuneri în fazele ciclului în care prind bine.
+          </span>
+        </fieldset>
 
         <label className="mt-3 block">
           <span className="eticheta">Link (Cookidoo sau oriunde)</span>

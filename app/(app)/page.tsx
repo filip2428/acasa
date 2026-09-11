@@ -12,8 +12,10 @@ import { masaDin } from "@/lib/servicii/retete";
 import { propunereaDeMeniu } from "@/lib/servicii/meniu";
 import { declutterulLunii, treburiScadente } from "@/lib/servicii/planificator";
 import { propunereaZilei } from "@/lib/servicii/propuneri";
+import { cineIsiUrmaresteCiclul, stareaZilei } from "@/lib/servicii/ciclu";
 import { sesiuneCurenta } from "@/lib/sesiune";
 
+import CardCiclu from "./CardCiclu";
 import Propunere from "./Propunere";
 import PropunereMasa from "./PropunereMasa";
 import Reminder from "./Reminder";
@@ -33,7 +35,8 @@ export default async function PaginaAzi() {
 
   const ziuaDeAzi = azi();
 
-  const [lista, buget, treburi, declutter, persoane, expira, evenimente] = await Promise.all([
+  const [lista, buget, treburi, declutter, persoane, expira, evenimente, urmariti, stareaMea] =
+    await Promise.all([
     // Lista și articolele ei vin într-un singur lanț, în paralel cu restul.
     listaCurenta().then(async (l) => ({ id: l.id, articole: await articoleleListei(l.id) })),
     bugetulLunii(),
@@ -42,10 +45,20 @@ export default async function PaginaAzi() {
     persoaneleCasei(),
     ceExpira(3),
     evenimenteDeAnuntat(),
+    cineIsiUrmaresteCiclul(ziuaDeAzi),
+    sesiune ? stareaZilei(sesiune.persoanaId, ziuaDeAzi) : Promise.resolve(null),
   ]);
 
   // Cu doi oameni în casă, „celălalt” e cel care nu sunt eu.
   const celalalt = persoane.find((p) => p.id !== sesiune?.persoanaId);
+
+  // În zilele cu menstruație, treburile marcate „nu o propune” coboară la coadă
+  // pentru ea. Nu dispar: poate le face celălalt.
+  const alMeu = urmariti.find((u) => u.persoanaId === sesiune?.persoanaId);
+  const treburiAzi =
+    alMeu?.stare.faza === "menstruala"
+      ? [...treburi].sort((a, b) => Number(a.evitaLaMenstruatie) - Number(b.evitaLaMenstruatie))
+      : treburi;
 
   const articole = lista.articole;
   const sume = totaluri(articole);
@@ -106,9 +119,18 @@ export default async function PaginaAzi() {
           </Suspense>
         )}
 
+        {urmariti.map((u) => (
+          <CardCiclu
+            key={u.persoanaId}
+            urmarit={u}
+            esteAlMeu={u.persoanaId === sesiune?.persoanaId}
+            stareaZilei={u.persoanaId === sesiune?.persoanaId ? stareaMea : null}
+          />
+        ))}
+
         <div className="intra">
           <Treburi
-            treburi={treburi}
+            treburi={treburiAzi}
             declutter={declutter}
             persoane={persoane}
             eu={sesiune?.persoanaId ?? 0}

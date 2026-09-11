@@ -26,6 +26,11 @@ export type DateDeScor = {
   minuteTotal: number | null;
   /** Are ceva în calendar diseară. Atunci nu-i propunem trei ore de gătit. */
   searaOcupata: boolean;
+  /**
+   * Rețeta are ce prinde bine în faza de acum a ciclului: fier în zilele de
+   * menstruație, magneziu sau carbohidrați complecși în săptămâna dinainte.
+   */
+  potrivitaFazei?: boolean;
 };
 
 /** Sub atâtea zile socotim că un produs „stă să expire”. */
@@ -51,6 +56,10 @@ export function scorulRetetei(d: DateDeScor) {
 
   if (d.favorit) scor += 6;
 
+  // Faza ciclului împinge rețeta în sus, dar nu peste mâncarea care expiră: un
+  // plus de fier nu justifică aruncatul smântânii.
+  if (d.potrivitaFazei) scor += 12;
+
   if (d.searaOcupata) {
     // Într-o seară plină, fiecare minut peste o jumătate de oră doare.
     if (d.minuteTotal && d.minuteTotal > GATIT_SCURT) {
@@ -69,7 +78,12 @@ export function scorulRetetei(d: DateDeScor) {
  */
 export function motivulPropunerii(
   d: DateDeScor,
-  detalii: { primulCareExpira?: { nume: string; zile: number }; primaLipsa?: string },
+  detalii: {
+    primulCareExpira?: { nume: string; zile: number };
+    primaLipsa?: string;
+    /** „Bogată în fier, prinde bine zilele astea” — gata scris, pentru că depinde a cui e faza. */
+    motivFazei?: string;
+  },
 ) {
   const expira = detalii.primulCareExpira;
   if (expira) {
@@ -83,6 +97,8 @@ export function motivulPropunerii(
             : `mai are ${expira.zile} zile`;
     return `Folosește ${expira.nume.toLowerCase()}, ${cand}`;
   }
+
+  if (detalii.motivFazei) return detalii.motivFazei;
 
   if (d.lipsuri === 0) {
     if (d.searaOcupata && d.minuteTotal && d.minuteTotal <= GATIT_SCURT) {

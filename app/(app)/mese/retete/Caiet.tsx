@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { RetetaAfisata } from "@/lib/domeniu";
+import { ETICHETE_NUTRITIE } from "@/lib/servicii/socoteli-ciclu";
 import { cuDe } from "@/lib/formatare";
 
 import FisaReteta, { retetaNoua } from "./FisaReteta";
@@ -24,8 +25,16 @@ const FILTRE = [
 
 type Filtru = (typeof FILTRE)[number]["valoare"];
 
-export default function Caiet({ retete }: { retete: RetetaAfisata[] }) {
+export default function Caiet({
+  retete,
+  eticheta: etichetaInitiala = null,
+}: {
+  retete: RetetaAfisata[];
+  /** Venit din ecranul ciclului: „rețete bogate în fier”. */
+  eticheta?: string | null;
+}) {
   const [filtru, setFiltru] = useState<Filtru>("toate");
+  const [eticheta, setEticheta] = useState(etichetaInitiala);
   const [termen, setTermen] = useState("");
   const [fisa, setFisa] = useState(false);
 
@@ -33,12 +42,15 @@ export default function Caiet({ retete }: { retete: RetetaAfisata[] }) {
     const curat = termen.trim().toLowerCase();
     return retete.filter((r) => {
       if (curat && !r.titlu.toLowerCase().includes(curat)) return false;
+      if (eticheta && !r.etichete.includes(eticheta)) return false;
       if (filtru === "acum") return r.dinTotal > 0 && r.ai === r.dinTotal;
       if (filtru === "tm6") return r.laTm6;
       if (filtru === "favorite") return r.favorit;
       return true;
     });
-  }, [retete, termen, filtru]);
+  }, [retete, termen, filtru, eticheta]);
+
+  const numeEticheta = ETICHETE_NUTRITIE.find((e) => e.valoare === eticheta)?.eticheta;
 
   return (
     <>
@@ -68,6 +80,21 @@ export default function Caiet({ retete }: { retete: RetetaAfisata[] }) {
               </button>
             ))}
           </div>
+
+          {eticheta && (
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-smalt-palid)] px-3.5 py-2">
+              <span className="text-sm text-[var(--color-smalt-adanc)]">
+                Doar: {(numeEticheta ?? eticheta).toLowerCase()}
+              </span>
+              <button
+                type="button"
+                className="text-sm text-[var(--color-smalt-adanc)] underline"
+                onClick={() => setEticheta(null)}
+              >
+                toate
+              </button>
+            </div>
+          )}
         </>
       )}
 

@@ -5,7 +5,12 @@ import Caiet from "./Caiet";
 
 export const metadata = { title: "Rețete — Acasă" };
 
-export default async function PaginaRetete() {
+export default async function PaginaRetete({
+  searchParams,
+}: {
+  searchParams: Promise<{ eticheta?: string }>;
+}) {
+  const { eticheta } = await searchParams;
   const retete = await caietulDeRetete();
   const acum = retete.filter((r) => r.dinTotal > 0 && r.ai === r.dinTotal).length;
 
@@ -23,7 +28,7 @@ export default async function PaginaRetete() {
       />
 
       <div className="mx-auto -mt-5 max-w-lg space-y-3 px-4">
-        <Caiet retete={retete} />
+        <Caiet retete={retete} eticheta={eticheta ?? null} />
       </div>
     </main>
   );

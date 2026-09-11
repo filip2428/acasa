@@ -57,8 +57,8 @@ categoriile lunii curente și, de la etapa 3, scrie înapoi rânduri de tranzac�
    `ANTHROPIC_API_KEY`*.
 4. ~~Google Calendar și motorul de propuneri~~ **gata** — *fiecare trebuie să-și
    partajeze calendarul cu contul de serviciu și să-l lege din Setări*.
-5. ~~Caietul de rețete, planul de mese, „ce gătim azi”~~ **gata** · sincronizarea
-   cu Cookidoo și fazele ciclului — *au nevoie de credențialele Cookidoo*.
+5. ~~Caietul de rețete, planul de mese, „ce gătim azi”, fazele ciclului~~ **gata** ·
+   sincronizarea cu Cookidoo — *are nevoie de credențialele Cookidoo*.
 6. ~~Calendarul casei, dorințe, șabloane de bagaje~~ **gata** · Siri Shortcuts.
 
 Schema bazei de date (`lib/db/schema.ts`) e scrisă din start pentru toate etapele.
@@ -121,6 +121,40 @@ Propunerea vine cu motivul ei scris: *„Folosește smântâna, expiră mâine.�
 explicație ar fi o ghicitoare. Tace dacă masa e deja pusă în plan, dimineața
 devreme, și când tot ce are de propus începe cu un drum la magazin.
 
+## Ciclul
+
+Pe ecranul **Ciclul** (din Setări sau din cardul de pe „Azi”) cea care își urmărește
+ciclul marchează două lucruri: ziua în care a început menstruația și, dacă vrea, ziua
+în care s-a terminat. Restul se socotește în `lib/servicii/socoteli-ciclu.ts`, cu
+probe în `npm run proba`:
+
+- **lungimea ciclului** e media ultimelor ei cicluri (intervalele sub 21 sau peste
+  45 de zile sunt aproape sigur marcări lipsă sau duble și nu intră în medie); până
+  la un ciclu întreg se socotește cu 28;
+- **ovulația** se estimează cu vreo 14 zile înainte de următoarea menstruație,
+  pentru că faza de după ea variază mult mai puțin decât cea de dinainte;
+- **când a trecut mult peste obicei** și nu s-a marcat nimic, aplicația spune „nu
+  știm faza” în loc să ghicească.
+
+Ce vede fiecare: ziua, faza și estimările se văd de amândoi, cum a hotărât Ralu.
+Numai ea își poate marca ciclul. Întrebarea zilnică „cum te simți azi” (energie și
+câteva simptome, de un tap) i se arată doar ei; pe ecranul ciclului apar doar
+tiparele strânse din răspunsuri, pe faze, după cel puțin trei zile într-o fază.
+
+Ce schimbă în restul aplicației:
+
+- **Mesele.** Rețetele se pot marca „bogat în fier”, „magneziu”, „carbohidrați
+  complecși”. În zilele de menstruație urcă cele cu fier, în faza luteală cele cu
+  magneziu sau carbohidrați complecși, iar motivul o spune: *„Bogată în fier, îi
+  prinde bine lui Ralu zilele astea.”* Mâncarea care expiră rămâne pe primul loc.
+  În celelalte faze nu se schimbă nimic, pentru că nu există o recomandare cu
+  dovezi în spate.
+- **Treburile.** Cele marcate „nu o propune în zilele cu menstruație” nu mai sunt
+  propuse atunci și coboară la coada listei ei de pe „Azi”. Nu dispar — le poate
+  face celălalt.
+
+Sunt estimări, nu sfaturi medicale, și ecranul spune asta.
+
 ## Calendarul
 
 Două vederi, pentru două întrebări:
@@ -161,7 +195,7 @@ dacă e doar la citire, aplicația spune exact asta și nu se preface că a mers
 | **Mese** | Planul săptămânii, lipsurile pentru el, caietul de rețete. |
 | **Casa** | Zone și treburi · Calendar (grila lunii + listă pe categorii) · Dorințe · Bagaje. |
 | **Bani** | Cheltuieli manuale pe orice categorie din buget, plus starea lunii. |
-| **Setări** | Calendarul tău Google, notificări, starea legăturii cu bugetul, ieșire din cont. |
+| **Setări** | Calendarul tău Google, ciclul, notificări, starea legăturii cu bugetul, ieșire din cont. |
 
 ## Ceasul: notificările programate
 

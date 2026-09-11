@@ -7,9 +7,20 @@ import { persoane } from "@/lib/db/schema";
 import type { PropunereMeniu, RetetaAfisata } from "@/lib/domeniu";
 import { azi, inRomania, zileIntre } from "@/lib/formatare";
 import { evenimenteGoogle } from "@/lib/servicii/calendar-google";
+import { accentulMeselor } from "@/lib/servicii/ciclu";
 import { areGoogle } from "@/lib/servicii/google";
 import { caietulDeRetete } from "@/lib/servicii/retete";
+import { ETICHETE_NUTRITIE } from "@/lib/servicii/socoteli-ciclu";
 import { motivulPropunerii, scorulRetetei } from "@/lib/servicii/socoteli-meniu";
+
+type Accent = Awaited<ReturnType<typeof accentulMeselor>>;
+
+/** „Bogată în fier, prinde bine zilele astea” — sau „îi prinde bine lui Ralu”, pentru celălalt. */
+function motivulFazei(eticheta: string, accent: NonNullable<Accent>, cititorId: number) {
+  const scurt = ETICHETE_NUTRITIE.find((e) => e.valoare === eticheta)?.scurt ?? eticheta;
+  const cui = accent.persoanaId === cititorId ? "prinde bine" : `îi prinde bine lui ${accent.nume}`;
+  return `${scurt.charAt(0).toLocaleUpperCase("ro")}${scurt.slice(1)}, ${cui} zilele astea`;
+}
 
 /*
   „Ce gătim azi.”
@@ -51,10 +62,17 @@ export async function searaEsteOcupata(persoanaId: number, ziua = azi()) {
   }
 }
 
-function cuScor(retete: RetetaAfisata[], searaOcupata: boolean, ziua: string) {
+function cuScor(
+  retete: RetetaAfisata[],
+  searaOcupata: boolean,
+  ziua: string,
+  accent: Accent,
+  cititorId: number,
+) {
   return retete
     .map((r) => {
       const lipsuri = r.dinTotal - r.ai;
+      const etichetaFazei = accent ? r.etichete.find((e) => accent.etichete.includes(e)) : undefined;
       const date = {
         lipsuri,
         necesare: r.dinTotal,
@@ -63,6 +81,7 @@ function cuScor(retete: RetetaAfisata[], searaOcupata: boolean, ziua: string) {
         favorit: r.favorit,
         minuteTotal: r.minuteTotal,
         searaOcupata,
+        potrivitaFazei: Boolean(etichetaFazei),
       };
 
       return {
@@ -71,6 +90,8 @@ function cuScor(retete: RetetaAfisata[], searaOcupata: boolean, ziua: string) {
         motiv: motivulPropunerii(date, {
           primulCareExpira: r.expiraInEa[0],
           primaLipsa: r.ingrediente.find((i) => i.stare === "lipsa")?.nume,
+          motivFazei:
+            etichetaFazei && accent ? motivulFazei(etichetaFazei, accent, cititorId) : undefined,
         }),
       };
     })
@@ -79,12 +100,13 @@ function cuScor(retete: RetetaAfisata[], searaOcupata: boolean, ziua: string) {
 
 /** Toate rețetele, în ordinea în care merită gătite azi. */
 export async function cePotGati(persoanaId: number, ziua = azi()) {
-  const [toate, ocupat] = await Promise.all([
+  const [toate, ocupat, accent] = await Promise.all([
     caietulDeRetete(ziua),
     searaEsteOcupata(persoanaId, ziua),
+    accentulMeselor(ziua),
   ]);
 
-  return cuScor(toate, ocupat, ziua);
+  return cuScor(toate, ocupat, ziua, accent, persoanaId);
 }
 
 export type RetetaPropusa = Awaited<ReturnType<typeof cePotGati>>[number];
