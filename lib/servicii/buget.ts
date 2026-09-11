@@ -1,6 +1,7 @@
 import "server-only";
 
 import { and, desc, eq, isNull, notInArray, sql } from "drizzle-orm";
+import { after } from "next/server";
 
 import { db } from "@/lib/db";
 import { bugetLunar, tranzactii } from "@/lib/db/schema";
@@ -133,6 +134,31 @@ export async function bugetulLunii(
     local.every((r) => Date.now() / 1000 - r.actualizatLa < MINUTE_PROSPATIME * 60);
 
   if (prospat) return dinCopie(local);
+
+  // Copia e veche, dar există: o arătăm pe loc și recitim foaia după ce ecranul a
+  // plecat spre telefon. Altfel „Azi” și „Listă” ar sta o secundă după Google de
+  // fiecare dată când trece jumătatea de oră.
+  if (!fortat && local.length > 0) {
+    const recitire = async () => {
+      try {
+        const proaspat = await citesteDinSheets(luna);
+        if (proaspat.length > 0) await salveazaCopia(luna, proaspat);
+      } catch (eroare) {
+        console.error("Nu am putut reîmprospăta bugetul din Google Sheets:", eroare);
+      }
+    };
+
+    try {
+      after(recitire);
+    } catch {
+      // În afara unei cereri (scripturi, probe) nu există „după”: recitim acum.
+      await recitire();
+      const reinnoit = await db.select().from(bugetLunar).where(eq(bugetLunar.luna, luna));
+      return dinCopie(reinnoit);
+    }
+
+    return dinCopie(local);
+  }
 
   try {
     const proaspat = await citesteDinSheets(luna);

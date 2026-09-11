@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import Antet from "@/componente/Antet";
 import { azi, candFataDeAzi, lei, ziLunga } from "@/lib/formatare";
@@ -30,8 +31,11 @@ const CATEGORII_URMARITE = ["Mâncare", "Transport", "hobby", "Mâncare în ora�
 export default async function PaginaAzi() {
   const sesiune = await sesiuneCurenta();
 
+  const ziuaDeAzi = azi();
+
   const [lista, buget, treburi, declutter, persoane, expira, evenimente] = await Promise.all([
-    listaCurenta(),
+    // Lista și articolele ei vin într-un singur lanț, în paralel cu restul.
+    listaCurenta().then(async (l) => ({ id: l.id, articole: await articoleleListei(l.id) })),
     bugetulLunii(),
     treburiScadente(),
     declutterulLunii(),
@@ -43,18 +47,7 @@ export default async function PaginaAzi() {
   // Cu doi oameni în casă, „celălalt” e cel care nu sunt eu.
   const celalalt = persoane.find((p) => p.id !== sesiune?.persoanaId);
 
-  // Propunerile se uită în calendarul celui logat, deci se cer abia după sesiune.
-  const ziuaDeAzi = azi();
-  const cina = await masaDin(ziuaDeAzi, "cina");
-
-  const [propunere, masa] = sesiune
-    ? await Promise.all([
-        propunereaZilei(sesiune.persoanaId),
-        propunereaDeMeniu(sesiune.persoanaId, ziuaDeAzi, cina != null),
-      ])
-    : [null, null];
-
-  const articole = await articoleleListei(lista.id);
+  const articole = lista.articole;
   const sume = totaluri(articole);
   const deLuat = articole.filter((a) => !a.bifat);
 
@@ -107,9 +100,11 @@ export default async function PaginaAzi() {
           </Link>
         )}
 
-        {masa && <PropunereMasa propunere={masa} ziua={ziuaDeAzi} />}
-
-        {propunere && <Propunere propunere={propunere} />}
+        {sesiune && (
+          <Suspense fallback={null}>
+            <PropunerileZilei persoanaId={sesiune.persoanaId} ziua={ziuaDeAzi} />
+          </Suspense>
+        )}
 
         <div className="intra">
           <Treburi
@@ -187,5 +182,25 @@ export default async function PaginaAzi() {
         )}
       </div>
     </main>
+  );
+}
+
+/*
+  Propunerile citesc calendarul Google — cea mai lentă parte a ecranului. Stau în
+  Suspense-ul lor, ca restul ecranului să apară fără să le aștepte.
+*/
+async function PropunerileZilei({ persoanaId, ziua }: { persoanaId: number; ziua: string }) {
+  const cina = await masaDin(ziua, "cina");
+
+  const [propunere, masa] = await Promise.all([
+    propunereaZilei(persoanaId),
+    propunereaDeMeniu(persoanaId, ziua, cina != null),
+  ]);
+
+  return (
+    <>
+      {masa && <PropunereMasa propunere={masa} ziua={ziua} />}
+      {propunere && <Propunere propunere={propunere} />}
+    </>
   );
 }

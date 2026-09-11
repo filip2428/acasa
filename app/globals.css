@@ -50,6 +50,8 @@
 
 html {
   -webkit-tap-highlight-color: transparent;
+  /* Fără așteptarea după un posibil dublu-tap: atingerea pleacă imediat. */
+  touch-action: manipulation;
   /* iOS trage pagina în jos peste antet; culoarea de dedesubt trebuie să fie tot smalț. */
   background-color: var(--color-smalt);
 }
@@ -279,5 +281,38 @@ select.camp {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* -------------------------------------------------------------------- atingerea */
+
+/*
+  Pe telefon nu există hover, iar evidențierea implicită a atingerii e oprită
+  (ar pune un dreptunghi gri peste smalț). Fără nimic în loc, un rând apăsat nu
+  dădea niciun semn că a simțit degetul. Semnul e mic și imediat. Butoanele au
+  deja semnul lor, așa că nu le atingem aici.
+*/
+:where(ul.card, .card-lipit) :where(a, button):not(.buton):active,
+a.card:active {
+  background-color: rgb(27 36 32 / 0.05);
+}
+
+/* ------------------------------------------------------------------ încărcarea */
+
+/* Locul în care vin datele. Pulsează încet, ca un ecran care lucrează, nu care stă. */
+.schelet {
+  background-color: var(--color-linie);
+  animation: schelet 1.4s ease-in-out infinite;
+}
+.schelet-pe-smalt {
+  background-color: rgb(255 255 255 / 0.14);
+}
+@keyframes schelet {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
   }
 }
