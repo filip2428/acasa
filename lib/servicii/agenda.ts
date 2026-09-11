@@ -5,11 +5,11 @@ import { isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { evenimente as tabelEvenimente } from "@/lib/db/schema";
 import type { IntrareZi, ZiDinCalendar } from "@/lib/domeniu";
-import { azi } from "@/lib/formatare";
+import { azi, deplaseaza } from "@/lib/formatare";
 import { calendarulCasei } from "@/lib/servicii/calendar-casa";
 import { agendaCasei } from "@/lib/servicii/calendar-google";
 import { treburiInInterval } from "@/lib/servicii/planificator";
-import { deplaseaza, marginileGrilei } from "@/lib/servicii/socoteli-calendar";
+import { marginileGrilei } from "@/lib/servicii/socoteli-calendar";
 
 /*
   Grila unei luni.

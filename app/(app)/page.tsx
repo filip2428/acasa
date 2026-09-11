@@ -57,7 +57,7 @@ export default async function PaginaAzi() {
 
   return (
     <main>
-      <Antet supratitlu={ziLunga(new Date())} titlu={`Bună, ${sesiune?.nume ?? ""}`} />
+      <Antet supratitlu={ziLunga(ziuaDeAzi)} titlu={`Bună, ${sesiune?.nume ?? ""}`} />
 
       <div className="mx-auto -mt-5 max-w-lg space-y-4 px-4">
         {expira.length > 0 && (

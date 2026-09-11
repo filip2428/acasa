@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 
 import { bifeazaTreaba } from "../../actiuni";
 import type { DateEveniment, EvenimentAfisat, IntrareZi, ZiDinCalendar } from "@/lib/domeniu";
-import { lunaInCuvinte, lunaVecina } from "@/lib/formatare";
+import { lunaInCuvinte, lunaVecina, ziLunga } from "@/lib/formatare";
 
 import Fisa, { evenimentNou, type CalendarPersoana } from "./Fisa";
 
@@ -240,17 +240,6 @@ function Semn({ culoare, nume, dunga }: { culoare: string; nume: string; dunga?:
 
 /* ------------------------------------------------------------- ziua aleasă */
 
-const ZILE_LUNGI = ["duminică", "luni", "marți", "miercuri", "joi", "vineri", "sâmbătă"];
-const LUNI_LUNGI = [
-  "ianuarie", "februarie", "martie", "aprilie", "mai", "iunie",
-  "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie",
-];
-
-function ziuaInCuvinte(zi: string) {
-  const d = new Date(`${zi}T12:00:00`);
-  return `${ZILE_LUNGI[d.getDay()]}, ${d.getDate()} ${LUNI_LUNGI[d.getMonth()]}`;
-}
-
 function ZiuaAleasa({
   zi,
   ziuaDeAzi,
@@ -267,7 +256,7 @@ function ZiuaAleasa({
   return (
     <section>
       <h2 className="eticheta mb-1.5 px-1">
-        {zi.ziua === ziuaDeAzi ? "Azi" : ziuaInCuvinte(zi.ziua)}
+        {zi.ziua === ziuaDeAzi ? "Azi" : ziLunga(zi.ziua)}
       </h2>
 
       {zi.intrari.length === 0 ? (

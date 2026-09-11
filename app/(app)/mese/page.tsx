@@ -1,5 +1,5 @@
 import Antet from "@/componente/Antet";
-import { azi, ziLunga } from "@/lib/formatare";
+import { azi, deplaseaza, ziLunga } from "@/lib/formatare";
 import { cePotGati } from "@/lib/servicii/meniu";
 import { lipsurilePlanului, planulSaptamanii } from "@/lib/servicii/retete";
 import { sesiuneCurenta } from "@/lib/sesiune";
@@ -20,12 +20,10 @@ function saptamana(ziuaDeAzi: string) {
   const zile: { valoare: string; eticheta: string; esteAzi: boolean }[] = [];
 
   for (let i = 0; i < CATE_ZILE; i += 1) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    const valoare = azi(d);
+    const valoare = deplaseaza(ziuaDeAzi, i);
     zile.push({
       valoare,
-      eticheta: i === 0 ? "Azi" : i === 1 ? "Mâine" : ziLunga(d),
+      eticheta: i === 0 ? "Azi" : i === 1 ? "Mâine" : ziLunga(valoare),
       esteAzi: valoare === ziuaDeAzi,
     });
   }

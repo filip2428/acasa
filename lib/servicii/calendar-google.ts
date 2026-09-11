@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { persoane } from "@/lib/db/schema";
 import type { AgendaPersoanei, EvenimentGoogle } from "@/lib/domeniu";
-import { azi, inRomania } from "@/lib/formatare";
+import { azi, deplaseaza, inRomania } from "@/lib/formatare";
 import { areGoogle, cereGoogle, codulErorii } from "@/lib/servicii/google";
 
 /*
@@ -40,13 +40,6 @@ type RaspunsEvenimente = {
   }[];
 };
 
-/** Ziua următoare, ca „AAAA-LL-ZZ”. */
-function ziuaUrmatoare(zi: string) {
-  const d = new Date(`${zi}T12:00:00`);
-  d.setDate(d.getDate() + 1);
-  return azi(d);
-}
-
 /**
  * Evenimentele dintr-un calendar, între două zile (inclusiv).
  *
@@ -60,8 +53,8 @@ export async function evenimenteGoogle(
   panaLa: string,
 ): Promise<EvenimentGoogle[]> {
   const parametri = new URLSearchParams({
-    timeMin: `${deLa}T00:00:00Z`,
-    timeMax: `${ziuaUrmatoare(panaLa)}T23:59:59Z`,
+    timeMin: `${deplaseaza(deLa, -1)}T00:00:00Z`,
+    timeMax: `${deplaseaza(panaLa, 1)}T23:59:59Z`,
     singleEvents: "true",
     orderBy: "startTime",
     maxResults: "250",
@@ -81,8 +74,8 @@ export async function evenimenteGoogle(
     if (item.start?.date) {
       // Toată ziua. Google dă sfârșitul exclusiv, deci o excursie 12–14 are
       // end.date = 15; mergem zi cu zi până înainte de el.
-      const sfarsit = item.end?.date ?? ziuaUrmatoare(item.start.date);
-      for (let zi = item.start.date; zi < sfarsit && zi <= panaLa; zi = ziuaUrmatoare(zi)) {
+      const sfarsit = item.end?.date ?? deplaseaza(item.start.date, 1);
+      for (let zi = item.start.date; zi < sfarsit && zi <= panaLa; zi = deplaseaza(zi, 1)) {
         if (zi < deLa) continue;
         iesire.push({
           id: `${item.id}:${zi}`,
@@ -167,11 +160,9 @@ export async function agendaCasei(deLa: string, panaLa: string): Promise<AgendaP
 /** Verificare din Setări: merge sau nu, și de ce nu. */
 export async function incearcaCalendarul(calendarId: string) {
   const acum = azi();
-  const peste = new Date();
-  peste.setDate(peste.getDate() + 30);
 
   try {
-    const gasite = await evenimenteGoogle(calendarId.trim(), acum, azi(peste));
+    const gasite = await evenimenteGoogle(calendarId.trim(), acum, deplaseaza(acum, 30));
     return { merge: true as const, cate: gasite.length };
   } catch (eroare) {
     return { merge: false as const, motiv: explica(eroare) };
@@ -199,7 +190,7 @@ export async function pune(
         .join("\n\n"),
       start: { date: eveniment.ziua },
       // La evenimentele de-o zi, Google vrea sfârșitul în ziua următoare.
-      end: { date: ziuaUrmatoare(eveniment.ziua) },
+      end: { date: deplaseaza(eveniment.ziua, 1) },
     }),
   });
   return raspuns.id;
@@ -243,7 +234,7 @@ export async function actualizeaza(
   if (eveniment.titlu) corp.summary = eveniment.titlu;
   if (eveniment.ziua) {
     corp.start = { date: eveniment.ziua };
-    corp.end = { date: ziuaUrmatoare(eveniment.ziua) };
+    corp.end = { date: deplaseaza(eveniment.ziua, 1) };
   }
 
   await cereGoogle(`${adresa(calendarId)}/events/${encodeURIComponent(evenimentId)}`, {

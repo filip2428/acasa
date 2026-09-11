@@ -19,8 +19,10 @@ Citește întâi `README.md` — stack, pornire, etape.
 - **Nu ștergem rânduri** care au istoric în spate (produse, liste). Marcăm
   `arhivat`/`activ`.
 - **Datele calendaristice** sunt text `AAAA-LL-ZZ`; momentele exacte, `integer`
-  în secunde. Pentru „azi” folosește `azi()` din `lib/formatare.ts`, nu
-  `toISOString()` — seara ar sări o zi.
+  în secunde. Pentru „azi” și „luna asta” folosește `azi()` / `lunaCurenta()`
+  din `lib/formatare.ts` — dau ziua din România, iar serverul de pe Vercel e pe
+  UTC. „Peste N zile” se socotește cu `deplaseaza(zi, n)` și `zileIntre()`,
+  niciodată cu `new Date()` + `setDate`, `getDate` sau `toISOString()`.
 - **Recurența pleacă de la ultima efectuare**, nu de la o dată fixă. E valabil
   pentru curățenie, pentru ITP și pentru orice altceva se repetă.
 

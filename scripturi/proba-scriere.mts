@@ -1,3 +1,4 @@
+import { lunaCurenta } from "../lib/formatare.ts";
 import { citesteAsezarea, litere, verificaIntervalul } from "../lib/servicii/asezare-foaie.ts";
 import { cereGoogle } from "../lib/servicii/google.ts";
 
@@ -25,7 +26,7 @@ if (!id) {
   process.exit(1);
 }
 
-const luna = new Date().toISOString().slice(0, 7);
+const luna = lunaCurenta();
 
 /* ------------------------------------------------------------ proba în gol */
 

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { persoane } from "@/lib/db/schema";
 import type { PropunereMeniu, RetetaAfisata } from "@/lib/domeniu";
-import { azi, inRomania } from "@/lib/formatare";
+import { azi, inRomania, zileIntre } from "@/lib/formatare";
 import { evenimenteGoogle } from "@/lib/servicii/calendar-google";
 import { areGoogle } from "@/lib/servicii/google";
 import { caietulDeRetete } from "@/lib/servicii/retete";
@@ -75,13 +75,6 @@ function cuScor(retete: RetetaAfisata[], searaOcupata: boolean, ziua: string) {
       };
     })
     .sort((a, b) => b.scor - a.scor);
-}
-
-function zileIntre(de_la: string, pana_la: string) {
-  return Math.round(
-    (new Date(`${pana_la}T12:00:00`).getTime() - new Date(`${de_la}T12:00:00`).getTime()) /
-      86_400_000,
-  );
 }
 
 /** Toate rețetele, în ordinea în care merită gătite azi. */

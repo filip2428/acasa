@@ -5,7 +5,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { categorii, produse, stoc } from "@/lib/db/schema";
 import type { RandStoc } from "@/lib/domeniu";
-import { azi } from "@/lib/formatare";
+import { azi, deplaseaza, zileIntre } from "@/lib/formatare";
 
 /*
   Cămara: ce avem în casă, unde, și până când.
@@ -19,13 +19,6 @@ import { azi } from "@/lib/formatare";
   Congelatorul nu e o zonă a casei, e un loc de depozitare: aceleași rânduri,
   alt `loc`.
 */
-
-function zileIntre(de_la: string, pana_la: string) {
-  return Math.round(
-    (new Date(`${pana_la}T12:00:00`).getTime() - new Date(`${de_la}T12:00:00`).getTime()) /
-      86_400_000,
-  );
-}
 
 export async function camara(ziua = azi()): Promise<RandStoc[]> {
   const randuri = await db
@@ -76,9 +69,7 @@ export async function expirarePropusa(produsId: number, deLa = azi()) {
 
   if (!produs?.zile) return null;
 
-  const d = new Date(`${deLa}T12:00:00`);
-  d.setDate(d.getDate() + produs.zile);
-  return azi(d);
+  return deplaseaza(deLa, produs.zile);
 }
 
 export async function pune(intrare: {

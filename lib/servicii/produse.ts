@@ -4,6 +4,7 @@ import { desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { categorii, magazine, preturi, produse } from "@/lib/db/schema";
+import { zileIntre } from "@/lib/formatare";
 
 /*
   Catalogul de produse și căutarea după codul de bare.
@@ -140,10 +141,7 @@ export async function actualizeazaRitmul(produsId: number) {
 
   const zile: number[] = [];
   for (let i = 0; i < date.length - 1; i++) {
-    const diferenta =
-      (new Date(`${date[i].data}T12:00:00`).getTime() -
-        new Date(`${date[i + 1].data}T12:00:00`).getTime()) /
-      86_400_000;
+    const diferenta = zileIntre(date[i + 1].data, date[i].data);
     if (diferenta > 0 && diferenta < 200) zile.push(diferenta);
   }
 

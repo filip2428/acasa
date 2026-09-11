@@ -5,7 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { persoane, propuneri, sarcini, zone } from "@/lib/db/schema";
 import type { EvenimentGoogle, PropunereaZilei, TreabaScadenta } from "@/lib/domeniu";
-import { azi, inRomania } from "@/lib/formatare";
+import { azi, deplaseaza, inRomania } from "@/lib/formatare";
 import {
   deCeNuSePoateScrie,
   evenimenteGoogle,
@@ -104,7 +104,7 @@ export async function propunereaZilei(
 
   // După-masă târziu nu mai are rost să propunem ziua de azi.
   const esteMaine = ora >= PREA_TARZIU;
-  const tinta = esteMaine ? ziuaUrmatoare(ziua) : ziua;
+  const tinta = esteMaine ? deplaseaza(ziua, 1) : ziua;
 
   const treburi = await treburiScadente(ziua);
   const alePersoanei = treburi.filter((t) => !t.atribuitLui || t.atribuitLui === persoanaId);
@@ -130,12 +130,6 @@ export async function propunereaZilei(
   }
 
   return null;
-}
-
-function ziuaUrmatoare(zi: string) {
-  const d = new Date(`${zi}T12:00:00`);
-  d.setDate(d.getDate() + 1);
-  return azi(d);
 }
 
 /* --------------------------------------------------------------- răspunsuri */

@@ -1,5 +1,5 @@
 import type { EvenimentGoogle } from "@/lib/domeniu";
-import { azi } from "@/lib/formatare";
+import { deplaseaza, zileInLuna } from "@/lib/formatare";
 
 /*
   Socotelile calendarului, scoase deoparte.
@@ -12,20 +12,13 @@ import { azi } from "@/lib/formatare";
 
 /** Ziua săptămânii, cu lunea pe 0 — cum se ține calendarul la noi. */
 export function ziDinSaptamana(zi: string) {
-  return (new Date(`${zi}T12:00:00`).getDay() + 6) % 7;
-}
-
-export function deplaseaza(zi: string, zile: number) {
-  const d = new Date(`${zi}T12:00:00`);
-  d.setDate(d.getDate() + zile);
-  return azi(d);
+  return (new Date(`${zi}T00:00:00Z`).getUTCDay() + 6) % 7;
 }
 
 /** Grila începe lunea dinaintea zilei de 1 și se termină duminica de după ultima zi. */
 export function marginileGrilei(luna: string) {
-  const [an, l] = luna.split("-").map(Number);
   const prima = `${luna}-01`;
-  const ultima = azi(new Date(an, l, 0));
+  const ultima = `${luna}-${zileInLuna(luna)}`;
 
   return {
     prima,

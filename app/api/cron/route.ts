@@ -100,7 +100,7 @@ async function trimiteRezumatul() {
 
   const [treburi, declutter, expira, evenimente] = await Promise.all([
     treburiScadente(ziua),
-    declutterulLunii(),
+    declutterulLunii(ziua.slice(0, 7)),
     ceExpira(2, ziua),
     evenimenteDeAnuntat(ziua),
   ]);
@@ -127,7 +127,7 @@ async function trimiteRezumatul() {
         : `${treburi.length} treburi, prima e ${treburi[0].titlu.toLowerCase()}`,
     );
   }
-  if (declutter && !declutter.facut && new Date(`${ziua}T12:00:00`).getDate() <= 3) {
+  if (declutter && !declutter.facut && Number(ziua.slice(8)) <= 3) {
     bucati.push(`declutter luna asta: ${declutter.zona.toLowerCase()}`);
   }
 

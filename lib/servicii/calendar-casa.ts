@@ -5,7 +5,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { evenimente } from "@/lib/db/schema";
 import type { DateEveniment, EvenimentAfisat } from "@/lib/domeniu";
-import { azi } from "@/lib/formatare";
+import { adaugaLuni, azi, zileIntre } from "@/lib/formatare";
 import {
   actualizeaza,
   deCeNuSePoateScrie,
@@ -22,24 +22,6 @@ import {
 
   Categoriile sunt cele cerute: mașină, casă, sănătate, documente, altele.
 */
-
-/** Adaugă luni la o dată, fără să sară peste sfârșitul lunii (31 ian + 1 lună = 28/29 feb). */
-export function adaugaLuni(data: string, luni: number) {
-  const d = new Date(`${data}T12:00:00`);
-  const ziua = d.getDate();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + luni);
-  const zileInLuna = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  d.setDate(Math.min(ziua, zileInLuna));
-  return azi(d);
-}
-
-function zileIntre(de_la: string, pana_la: string) {
-  return Math.round(
-    (new Date(`${pana_la}T12:00:00`).getTime() - new Date(`${de_la}T12:00:00`).getTime()) /
-      86_400_000,
-  );
-}
 
 /** Când e de făcut următoarea dată. */
 export function scadentaEvenimentului(

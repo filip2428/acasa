@@ -5,7 +5,7 @@ import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { efectuari, persoane, sarcini, setari, zone } from "@/lib/db/schema";
 import type { DeclutterulLunii, TreabaScadenta } from "@/lib/domeniu";
-import { azi, lunaCurenta } from "@/lib/formatare";
+import { azi, deplaseaza, lunaCurenta, zileIntre } from "@/lib/formatare";
 
 /*
   Ce e de făcut azi.
@@ -27,16 +27,7 @@ import { azi, lunaCurenta } from "@/lib/formatare";
 function scadenta(ultimaEfectuareLa: string | null, frecventaZile: number | null) {
   if (!frecventaZile) return null;
   if (!ultimaEfectuareLa) return azi(); // niciodată făcută: e scadentă acum
-  const d = new Date(`${ultimaEfectuareLa}T12:00:00`);
-  d.setDate(d.getDate() + frecventaZile);
-  return azi(d);
-}
-
-function zileIntre(de_la: string, pana_la: string) {
-  return Math.round(
-    (new Date(`${pana_la}T12:00:00`).getTime() - new Date(`${de_la}T12:00:00`).getTime()) /
-      86_400_000,
-  );
+  return deplaseaza(ultimaEfectuareLa, frecventaZile);
 }
 
 /** Treburile ajunse la scadență, cele mai întârziate primele. */
@@ -127,9 +118,7 @@ export async function treburiInInterval(deLa: string, panaLa: string, ziua = azi
           intarziat: cand < ziua,
         });
       }
-      const d = new Date(`${cand}T12:00:00`);
-      d.setDate(d.getDate() + r.frecventaZile);
-      cand = azi(d);
+      cand = deplaseaza(cand, r.frecventaZile);
       pasi += 1;
     }
   }

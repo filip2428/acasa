@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { remindere } from "@/lib/db/schema";
+import { deplaseaza, inRomania, momentInRomania } from "@/lib/formatare";
 import { amanaDeclutterul, marcheazaFacut } from "@/lib/servicii/planificator";
 import { accepta, refuza } from "@/lib/servicii/propuneri";
 import { instiinteaza } from "@/lib/servicii/push";
@@ -53,21 +54,23 @@ export async function amanaPropunerea(sarcinaId: number) {
 /*
   Reminderele plecate imediat sunt trimise pe loc; restul așteaptă ceasul din
   `/api/cron`, care le ridică la scadență.
+
+  „Diseară” și „mâine” sunt după ceasul din România, nu după al serverului.
 */
 function candSaPlece(cheie: string) {
-  const d = new Date();
+  const acum = new Date();
+  const { ziua, minutDinZi } = inRomania(acum);
+  let d: Date;
   switch (cheie) {
     case "o-ora":
-      d.setHours(d.getHours() + 1);
+      d = new Date(acum.getTime() + 3_600_000);
       break;
     case "diseara":
-      d.setHours(19, 0, 0, 0);
       // Dacă a trecut deja de 19, „diseară” înseamnă mâine seară.
-      if (d.getTime() < Date.now()) d.setDate(d.getDate() + 1);
+      d = momentInRomania(minutDinZi < 19 * 60 ? ziua : deplaseaza(ziua, 1), 19 * 60);
       break;
     case "maine":
-      d.setDate(d.getDate() + 1);
-      d.setHours(9, 0, 0, 0);
+      d = momentInRomania(deplaseaza(ziua, 1), 9 * 60);
       break;
     default:
       return { la: Math.floor(Date.now() / 1000), imediat: true };

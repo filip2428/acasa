@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
 
 import type { EvenimentGoogle } from "../lib/domeniu.ts";
-import { cuDe } from "../lib/formatare.ts";
+import {
+  adaugaLuni,
+  azi,
+  candFataDeAzi,
+  cuDe,
+  deplaseaza,
+  lunaCurenta,
+  lunaVecina,
+  momentInRomania,
+  zileIntre,
+  ziLunga,
+} from "../lib/formatare.ts";
 import {
   candIncape,
   marginileGrilei,
@@ -151,5 +162,59 @@ assert.equal(cuDe(20, "minute"), "20 de minute");
 assert.equal(cuDe(19, "minute"), "19 minute");
 assert.equal(cuDe(100, "minute"), "100 de minute");
 assert.equal(cuDe(101, "minute"), "101 minute");
+
+/* ------------------------------------------- ziua României, pe orice server */
+
+/*
+  Pe Vercel serverul e pe UTC, iar între miezul nopții și ora 3 ceasul lui e
+  încă în ziua de ieri. Probele trec prin mai multe fusuri — UTC, unul în urma
+  noastră și unul cu mult înainte — ca să nu treacă doar pentru că laptopul pe
+  care rulează e în România.
+*/
+const fusulMasinii = process.env.TZ;
+
+for (const fus of ["UTC", "America/Los_Angeles", "Pacific/Kiritimati", "Europe/Bucharest"]) {
+  process.env.TZ = fus;
+  const pe = `(serverul pe ${fus})`;
+
+  // 30 septembrie, 22:30 UTC: în România e deja 1 octombrie, 01:30.
+  const dupaMiezulNoptii = new Date("2026-09-30T22:30:00Z");
+  assert.equal(azi(dupaMiezulNoptii), "2026-10-01", `„azi” e ziua din România ${pe}`);
+  assert.equal(lunaCurenta(dupaMiezulNoptii), "2026-10", `pe 1 ale lunii, bugetul citește foaia lunii noi ${pe}`);
+
+  // Iarna decalajul e de două ore, nu de trei.
+  assert.equal(azi(new Date("2026-12-31T22:30:00Z")), "2027-01-01", `revelionul vine după ceasul nostru ${pe}`);
+  assert.equal(azi(new Date("2026-12-31T21:30:00Z")), "2026-12-31", `iarna, 23:30 e încă ziua de ieri ${pe}`);
+
+  // „Peste N zile” pleacă de la ziua din România, nu de la ceasul serverului.
+  assert.equal(deplaseaza(azi(dupaMiezulNoptii), 1), "2026-10-02", `mâine, socotit din azi-ul României ${pe}`);
+  assert.equal(deplaseaza("2026-12-31", 1), "2027-01-01", `peste an ${pe}`);
+  assert.equal(deplaseaza("2026-03-01", -1), "2026-02-28", `înapoi, peste lună ${pe}`);
+  assert.equal(deplaseaza("2026-03-28", 2), "2026-03-30", `peste trecerea la ora de vară ${pe}`);
+  assert.equal(deplaseaza("2026-10-24", 2), "2026-10-26", `peste trecerea la ora de iarnă ${pe}`);
+
+  assert.equal(zileIntre("2026-10-24", "2026-10-26"), 2, `ziua de 25 de ore nu strică numărătoarea ${pe}`);
+  assert.equal(zileIntre("2026-10-01", "2026-09-30"), -1, `înapoi în timp e negativ ${pe}`);
+  assert.equal(candFataDeAzi("2026-10-02", "2026-10-01"), "mâine", pe);
+  assert.equal(candFataDeAzi("2026-09-30", "2026-10-01"), "ieri", pe);
+
+  assert.equal(lunaVecina("2026-01", -1), "2025-12", `luna trecută, peste an ${pe}`);
+  assert.equal(lunaVecina("2026-12", 1), "2027-01", `luna viitoare, peste an ${pe}`);
+  assert.equal(adaugaLuni("2026-01-31", 1), "2026-02-28", `31 ianuarie + o lună ${pe}`);
+  assert.equal(adaugaLuni("2027-01-31", 13), "2028-02-29", `și în anul bisect ${pe}`);
+  assert.equal(adaugaLuni("2026-09-15", 24), "2028-09-15", `ITP-ul la doi ani ${pe}`);
+
+  assert.equal(ziLunga("2026-10-01"), "joi, 1 octombrie", pe);
+  assert.equal(marginileGrilei("2026-02").deLa, "2026-01-26", `grila nu depinde de fus ${pe}`);
+
+  // „Diseară la 19” și „mâine la 9”, ca moment exact.
+  assert.equal(momentInRomania("2026-10-01", 19 * 60).toISOString(), "2026-10-01T16:00:00.000Z", `vara ${pe}`);
+  assert.equal(momentInRomania("2026-12-01", 9 * 60).toISOString(), "2026-12-01T07:00:00.000Z", `iarna ${pe}`);
+  assert.equal(momentInRomania("2026-10-25", 19 * 60).toISOString(), "2026-10-25T17:00:00.000Z", `seara după ce s-a dat ceasul înapoi ${pe}`);
+  assert.equal(momentInRomania("2026-03-29", 9 * 60).toISOString(), "2026-03-29T06:00:00.000Z", `dimineața după ce s-a dat ceasul înainte ${pe}`);
+}
+
+if (fusulMasinii === undefined) delete process.env.TZ;
+else process.env.TZ = fusulMasinii;
 
 console.log("Probele calendarului au trecut.");

@@ -1,21 +1,20 @@
 import { notFound } from "next/navigation";
 
 import Antet from "@/componente/Antet";
-import { azi, ziLunga } from "@/lib/formatare";
+import { azi, deplaseaza, ziLunga } from "@/lib/formatare";
 import { dinCamaraPentru, produsePentruLegat, reteta } from "@/lib/servicii/retete";
 
 import Reteta from "./Reteta";
 
 /** Următoarele șapte zile, scrise cum se vorbește: „azi”, „mâine”, „vineri, 18 septembrie”. */
-function urmatoareleZile() {
+function urmatoareleZile(ziuaDeAzi = azi()) {
   const zile: { valoare: string; eticheta: string }[] = [];
 
   for (let i = 0; i < 7; i += 1) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
+    const valoare = deplaseaza(ziuaDeAzi, i);
     zile.push({
-      valoare: azi(d),
-      eticheta: i === 0 ? "azi" : i === 1 ? "mâine" : ziLunga(d),
+      valoare,
+      eticheta: i === 0 ? "azi" : i === 1 ? "mâine" : ziLunga(valoare),
     });
   }
 

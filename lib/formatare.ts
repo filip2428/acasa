@@ -37,37 +37,6 @@ const LUNI = [
   "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie",
 ];
 
-/** „joi, 10 septembrie” */
-export function ziLunga(d: Date) {
-  return `${ZILE[d.getDay()]}, ${d.getDate()} ${LUNI[d.getMonth()]}`;
-}
-
-/** Data de azi ca „AAAA-LL-ZZ”, în ora locală (nu UTC — altfel seara sare o zi). */
-export function azi(d = new Date()) {
-  const l = String(d.getMonth() + 1).padStart(2, "0");
-  const z = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${l}-${z}`;
-}
-
-/** Luna curentă ca „AAAA-LL” — exact formatul foilor din Buget_Familial. */
-export function lunaCurenta(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-/** „peste 3 zile”, „mâine”, „azi”, „acum 2 zile” */
-export function candFataDeAzi(data: string) {
-  const tinta = new Date(`${data}T12:00:00`);
-  const acum = new Date();
-  acum.setHours(12, 0, 0, 0);
-  const zile = Math.round((tinta.getTime() - acum.getTime()) / 86_400_000);
-
-  if (zile === 0) return "azi";
-  if (zile === 1) return "mâine";
-  if (zile === -1) return "ieri";
-  if (zile > 1) return `peste ${zile} zile`;
-  return `acum ${Math.abs(zile)} zile`;
-}
-
 /*
   Ora României, oriunde ar rula codul.
 
@@ -103,15 +72,108 @@ export function inRomania(d = new Date()) {
   };
 }
 
+/*
+  Zilele calendarului.
+
+  O zi e text „AAAA-LL-ZZ” și e întotdeauna ziua din România. Același motiv ca
+  mai sus: între miezul nopții și ora 3 (2 iarna), ceasul unui server pe UTC e
+  încă în ziua de ieri — iar pe 1 ale lunii, în luna trecută, deci bugetul ar
+  citi altă foaie.
+
+  De asta „azi” pleacă din `inRomania()`, iar tot ce înseamnă „peste N zile” sau
+  „luna viitoare” se socotește pe text, nu cu `setDate` pe ceasul mașinii.
+  Momentul UTC din `caMoment` e doar o unealtă de numărat zile: nu are ore de
+  vară, deci nu sare și nu se dublează nicio zi, oricare ar fi fusul mașinii.
+*/
+
+function caMoment(zi: string, zileInPlus = 0) {
+  const [an, luna, ziua] = zi.split("-").map(Number);
+  return Date.UTC(an, luna - 1, ziua + zileInPlus);
+}
+
+function caZi(moment: number) {
+  const d = new Date(moment);
+  const l = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const z = String(d.getUTCDate()).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${l}-${z}`;
+}
+
+/** Data de azi ca „AAAA-LL-ZZ”, în calendarul României. */
+export function azi(acum = new Date()) {
+  return inRomania(acum).ziua;
+}
+
+/** Luna curentă ca „AAAA-LL” — exact formatul foilor din Buget_Familial. */
+export function lunaCurenta(acum = new Date()) {
+  return azi(acum).slice(0, 7);
+}
+
+/** Ziua de peste `zile` zile (sau de acum atâtea, cu număr negativ). */
+export function deplaseaza(zi: string, zile: number) {
+  return caZi(caMoment(zi, zile));
+}
+
+/** Câte zile sunt de la `deLa` până la `panaLa`; negativ dacă `panaLa` e înainte. */
+export function zileIntre(deLa: string, panaLa: string) {
+  return Math.round((caMoment(panaLa) - caMoment(deLa)) / 86_400_000);
+}
+
+/** Câte zile are o lună „AAAA-LL”. */
+export function zileInLuna(luna: string) {
+  // Ziua 0 a lunii următoare e ultima zi a lunii acesteia.
+  const [an, l] = luna.split("-").map(Number);
+  return new Date(Date.UTC(an, l, 0)).getUTCDate();
+}
+
+/** Luna „AAAA-LL” de peste `deplasare` luni (sau de acum atâtea, cu număr negativ). */
+export function lunaVecina(luna: string, deplasare: number) {
+  const [an, l] = luna.split("-").map(Number);
+  const index = an * 12 + (l - 1) + deplasare;
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
+}
+
+/** Adaugă luni la o dată, fără să sară peste sfârșitul lunii (31 ian + 1 lună = 28/29 feb). */
+export function adaugaLuni(zi: string, luni: number) {
+  const luna = lunaVecina(zi.slice(0, 7), luni);
+  const ziua = Math.min(Number(zi.slice(8, 10)), zileInLuna(luna));
+  return `${luna}-${String(ziua).padStart(2, "0")}`;
+}
+
+/** „joi, 10 septembrie” */
+export function ziLunga(zi: string) {
+  const d = new Date(caMoment(zi));
+  return `${ZILE[d.getUTCDay()]}, ${d.getUTCDate()} ${LUNI[d.getUTCMonth()]}`;
+}
+
+/** „peste 3 zile”, „mâine”, „azi”, „acum 2 zile” */
+export function candFataDeAzi(data: string, ziuaDeAzi = azi()) {
+  const zile = zileIntre(ziuaDeAzi, data);
+
+  if (zile === 0) return "azi";
+  if (zile === 1) return "mâine";
+  if (zile === -1) return "ieri";
+  if (zile > 1) return `peste ${zile} zile`;
+  return `acum ${Math.abs(zile)} zile`;
+}
+
+/**
+ * Momentul exact în care ceasul din România arată `minutDinZi` în ziua `zi` —
+ * pentru „diseară la 19” sau „mâine la 9”, oricare ar fi fusul serverului.
+ */
+export function momentInRomania(zi: string, minutDinZi: number) {
+  const caPeCeas = caMoment(zi) + minutDinZi * 60_000;
+  // Decalajul (2 sau 3 ore) se ia de două ori: a doua oară chiar în jurul
+  // momentului găsit, ca să nimerească și zilele în care se schimbă ora.
+  const decalaj = (moment: number) => {
+    const acolo = inRomania(new Date(moment));
+    return caMoment(acolo.ziua) + acolo.minutDinZi * 60_000 - moment;
+  };
+  const primaIncercare = caPeCeas - decalaj(caPeCeas);
+  return new Date(caPeCeas - decalaj(primaIncercare));
+}
+
 /** „septembrie 2026” */
 export function lunaInCuvinte(luna: string) {
   const [an, l] = luna.split("-").map(Number);
   return `${LUNI[l - 1]} ${an}`;
-}
-
-/** Prima zi a lunii, ca „AAAA-LL-01”. Cu `deplasare`, sare atâtea luni. */
-export function lunaVecina(luna: string, deplasare: number) {
-  const [an, l] = luna.split("-").map(Number);
-  const d = new Date(an, l - 1 + deplasare, 1);
-  return lunaCurenta(d);
 }
