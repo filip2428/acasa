@@ -10,6 +10,7 @@ import {
   gatitPeLoc,
   leagaIngredientul,
   marcheazaGatit,
+  produsDupaNume,
   punePeLista,
   pusInPlan,
   salveazaReteta,
@@ -17,6 +18,7 @@ import {
   stergeIngredient,
   stergeReteta,
 } from "@/lib/servicii/retete";
+import { textIngredient } from "@/lib/servicii/socoteli-meniu";
 import { ceruteSesiune } from "@/lib/sesiune";
 
 /*
@@ -61,6 +63,43 @@ export async function adauga(
   await ceruteSesiune();
   await adaugaIngredient(retetaId, ingredient);
   reimprospateaza(retetaId);
+}
+
+/**
+ * Pune în rețetă un produs care nu e încă în catalog: îl creează acolo întâi, ca
+ * ingredientul să fie legat din prima. Fără categorie — se completează din
+ * Catalog, dacă merită.
+ */
+export async function puneProdusNou(
+  retetaId: number,
+  nume: string,
+  cantitate: number | null,
+  unitate: string | null,
+) {
+  await ceruteSesiune();
+  const produs = await produsDupaNume(nume);
+  if (!produs) return;
+
+  await adaugaIngredient(retetaId, {
+    textOriginal: textIngredient(produs.nume, cantitate, unitate ?? produs.unitate),
+    produsId: produs.id,
+    cantitate,
+    unitate: unitate ?? produs.unitate,
+  });
+
+  reimprospateaza(retetaId);
+  revalidatePath("/produse");
+}
+
+/** La fel, dar pentru un ingredient deja scris care n-a găsit pereche în catalog. */
+export async function leagaDeProdusNou(retetaId: number, ingredientId: number, nume: string) {
+  await ceruteSesiune();
+  const produs = await produsDupaNume(nume);
+  if (!produs) return;
+
+  await leagaIngredientul(ingredientId, produs.id);
+  reimprospateaza(retetaId);
+  revalidatePath("/produse");
 }
 
 export async function leaga(retetaId: number, ingredientId: number, produsId: number | null) {

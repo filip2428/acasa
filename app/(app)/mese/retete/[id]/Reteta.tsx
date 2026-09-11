@@ -6,13 +6,14 @@ import { useMemo, useState, useTransition } from "react";
 import type { RetetaAfisata, StareIngredient } from "@/lib/domeniu";
 import { MOMENTE } from "@/lib/domeniu";
 import { candFataDeAzi, cantitate as scrieCantitatea, cuDe } from "@/lib/formatare";
-import { desparteCantitatea } from "@/lib/servicii/socoteli-meniu";
+import { desparteCantitatea, textIngredient } from "@/lib/servicii/socoteli-meniu";
 
 import {
   adauga,
   amGatit,
   comutaSteluta,
   leaga,
+  leagaDeProdusNou,
   pune,
   sAterminat,
   scoateIngredientul,
@@ -20,6 +21,7 @@ import {
   treciPeLista,
 } from "../../actiuni";
 import FisaReteta from "../FisaReteta";
+import AlegeDinCatalog, { type ProdusDinCatalog } from "./AlegeDinCatalog";
 
 /*
   O rețetă.
@@ -30,7 +32,7 @@ import FisaReteta from "../FisaReteta";
   neștiut se leagă de catalog cu un tap, iar rețeta devine mai deșteaptă.
 */
 
-type Produs = { id: number; nume: string; unitate: string; mereuInCasa: boolean };
+type Produs = ProdusDinCatalog;
 type RandCamara = { id: number; nume: string; cantitate: number; unitate: string; loc: string };
 
 const CULORI_STARE: Record<StareIngredient, string> = {
@@ -59,6 +61,7 @@ export default function Reteta({
   zile: { valoare: string; eticheta: string }[];
 }) {
   const [deLegat, setDeLegat] = useState<number | null>(null);
+  const [catalog, setCatalog] = useState(false);
   const [planul, setPlanul] = useState(false);
   const [editare, setEditare] = useState(false);
   const [dupaGatit, setDupaGatit] = useState(false);
@@ -161,7 +164,11 @@ export default function Reteta({
           ))}
 
           <li className="p-2">
-            <CampIngredient retetaId={reteta.id} produse={produse} />
+            <CampIngredient
+              retetaId={reteta.id}
+              produse={produse}
+              laCatalog={() => setCatalog(true)}
+            />
           </li>
         </ul>
       </section>
@@ -245,13 +252,35 @@ export default function Reteta({
       {deLegat != null && (
         <AlegeProdusul
           produse={produse}
+          termenInitial={
+            desparteCantitatea(
+              reteta.ingrediente.find((i) => i.id === deLegat)?.textOriginal ?? "",
+            ).nume
+          }
           laAlegere={(produsId) =>
             porneste(async () => {
               await leaga(reteta.id, deLegat, produsId);
               setDeLegat(null);
             })
           }
+          laCreare={(nume) =>
+            porneste(async () => {
+              await leagaDeProdusNou(reteta.id, deLegat, nume);
+              setDeLegat(null);
+            })
+          }
           laInchidere={() => setDeLegat(null)}
+        />
+      )}
+
+      {catalog && (
+        <AlegeDinCatalog
+          retetaId={reteta.id}
+          produse={produse}
+          dejaInReteta={reteta.ingrediente
+            .map((i) => i.produsId)
+            .filter((id): id is number => id != null)}
+          laInchidere={() => setCatalog(false)}
         />
       )}
 
@@ -299,9 +328,47 @@ export default function Reteta({
 
 /* ------------------------------------------------------ adăugat ingrediente */
 
-function CampIngredient({ retetaId, produse }: { retetaId: number; produse: Produs[] }) {
+function CampIngredient({
+  retetaId,
+  produse,
+  laCatalog,
+}: {
+  retetaId: number;
+  produse: Produs[];
+  laCatalog: () => void;
+}) {
   const [text, setText] = useState("");
   const [, porneste] = useTransition();
+
+  const { cantitate, unitate, nume } = desparteCantitatea(text);
+
+  // Pe măsură ce scrii, catalogul îți arată ce are. Un tap pe o sugestie pune
+  // ingredientul legat, cu cantitatea deja scrisă — „500 g pui” → Piept de pui.
+  const sugestii = useMemo(() => {
+    const cautat = nume.trim().toLowerCase();
+    if (cautat.length < 2) return [];
+    return produse
+      .filter((p) => p.nume.toLowerCase().includes(cautat))
+      .sort((a, b) => {
+        const aIncepe = a.nume.toLowerCase().startsWith(cautat) ? 0 : 1;
+        const bIncepe = b.nume.toLowerCase().startsWith(cautat) ? 0 : 1;
+        return aIncepe - bIncepe;
+      })
+      .slice(0, 4);
+  }, [produse, nume]);
+
+  function puneProdusul(produs: Produs) {
+    const u = unitate ?? (cantitate ? produs.unitate : null);
+    setText("");
+    porneste(() =>
+      adauga(retetaId, {
+        textOriginal: textIngredient(produs.nume, cantitate, u),
+        produsId: produs.id,
+        cantitate,
+        unitate: u,
+      }),
+    );
+  }
 
   function trimite() {
     const curat = text.trim();
@@ -310,7 +377,6 @@ function CampIngredient({ retetaId, produse }: { retetaId: number; produse: Prod
     // „500 g piept de pui” → cantitate, unitate și un nume pe care îl putem căuta
     // în catalog. Dacă îl găsim, ingredientul se leagă singur — asta e ce face
     // diferența între o listă de cuvinte și o rețetă care știe dacă o poți găti.
-    const { cantitate, unitate, nume } = desparteCantitatea(curat);
     const potrivit = produse.find(
       (p) =>
         p.nume.toLowerCase() === nume.toLowerCase() ||
@@ -329,22 +395,49 @@ function CampIngredient({ retetaId, produse }: { retetaId: number; produse: Prod
   }
 
   return (
-    <div className="flex gap-2">
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            trimite();
-          }
-        }}
-        className="camp"
-        placeholder="500 g piept de pui"
-        aria-label="Adaugă un ingredient"
-      />
-      <button type="button" className="buton buton-principal shrink-0" onClick={trimite}>
-        Pune
+    <div>
+      <div className="flex gap-2">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              trimite();
+            }
+          }}
+          className="camp"
+          placeholder="500 g piept de pui"
+          aria-label="Adaugă un ingredient"
+          autoComplete="off"
+        />
+        <button type="button" className="buton buton-principal shrink-0" onClick={trimite}>
+          Pune
+        </button>
+      </div>
+
+      {sugestii.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Sugestii din catalog">
+          {sugestii.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={() => puneProdusul(p)}
+                className="buton buton-mic buton-secundar"
+              >
+                {p.nume}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <button
+        type="button"
+        onClick={laCatalog}
+        className="buton buton-mic buton-secundar mt-2 w-full"
+      >
+        Alege din catalog
       </button>
     </div>
   );
@@ -383,20 +476,30 @@ function Foaie({
 
 function AlegeProdusul({
   produse,
+  termenInitial,
   laAlegere,
+  laCreare,
   laInchidere,
 }: {
   produse: Produs[];
+  termenInitial: string;
   laAlegere: (produsId: number | null) => void;
+  laCreare: (nume: string) => void;
   laInchidere: () => void;
 }) {
-  const [termen, setTermen] = useState("");
+  // Pornim căutarea de la ce scrie în rețetă: „2 cepe” caută deja „cepe”.
+  const [termen, setTermen] = useState(termenInitial);
+  const curat = termen.trim();
 
   const gasite = useMemo(() => {
-    const curat = termen.trim().toLowerCase();
-    const toate = curat ? produse.filter((p) => p.nume.toLowerCase().includes(curat)) : produse;
+    const cautat = curat.toLowerCase();
+    const toate = cautat ? produse.filter((p) => p.nume.toLowerCase().includes(cautat)) : produse;
     return toate.slice(0, 30);
-  }, [produse, termen]);
+  }, [produse, curat]);
+
+  const existaDeja = produse.some(
+    (p) => p.nume.localeCompare(curat, "ro", { sensitivity: "base" }) === 0,
+  );
 
   return (
     <Foaie titlu="Leagă de un produs din catalog" laInchidere={laInchidere}>
@@ -414,25 +517,32 @@ function AlegeProdusul({
         autoFocus
       />
 
-      <ul className="card card-lipit mt-3 overflow-hidden">
-        {gasite.map((p) => (
-          <li key={p.id}>
-            <button
-              type="button"
-              onClick={() => laAlegere(p.id)}
-              className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left"
-            >
-              <span className="min-w-0 flex-1 truncate text-[0.9375rem]">{p.nume}</span>
-              {p.mereuInCasa && <span className="fisa shrink-0">mereu în casă</span>}
-            </button>
-          </li>
-        ))}
-        {gasite.length === 0 && (
-          <li className="px-3.5 py-3 text-sm text-[var(--color-creion)]">
-            Nu e în catalog. Adaugă-l întâi din Listă → Catalog.
-          </li>
-        )}
-      </ul>
+      {gasite.length > 0 && (
+        <ul className="card card-lipit mt-3 overflow-hidden">
+          {gasite.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={() => laAlegere(p.id)}
+                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left"
+              >
+                <span className="min-w-0 flex-1 truncate text-[0.9375rem]">{p.nume}</span>
+                {p.mereuInCasa && <span className="fisa shrink-0">mereu în casă</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {curat && !existaDeja && (
+        <button
+          type="button"
+          className="buton buton-secundar mt-3 w-full"
+          onClick={() => laCreare(curat)}
+        >
+          Pune „{curat}” în catalog și leagă-l
+        </button>
+      )}
 
       <button
         type="button"

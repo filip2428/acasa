@@ -5,6 +5,7 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte } from "drizzl
 import { db } from "@/lib/db";
 import {
   articoleLista,
+  categorii,
   ingredienteReteta,
   planMese,
   produse,
@@ -421,19 +422,66 @@ export async function punePeLista(produsIds: number[], persoanaId: number) {
   return catalog.length;
 }
 
-/** Produsele din catalog, pentru legat ingredientele. */
+/**
+ * Catalogul, așa cum îl vede cineva care scrie o rețetă: grupat pe raioane, cu
+ * prețul știut, și cu semn pentru ce e deja în casă.
+ */
 export async function produsePentruLegat() {
-  const randuri = await db
-    .select({
-      id: produse.id,
-      nume: produse.nume,
-      unitate: produse.unitate,
-      mereuInCasa: produse.mereuInCasa,
-    })
+  const [randuri, inCamara] = await Promise.all([
+    db
+      .select({
+        id: produse.id,
+        nume: produse.nume,
+        unitate: produse.unitate,
+        mereuInCasa: produse.mereuInCasa,
+        pretUltim: produse.pretUltim,
+        categorie: categorii.nume,
+        ordineCategorie: categorii.ordine,
+      })
+      .from(produse)
+      .leftJoin(categorii, eq(produse.categorieId, categorii.id))
+      .where(eq(produse.arhivat, false)),
+    db.select({ produsId: stoc.produsId }).from(stoc).where(isNull(stoc.consumatLa)),
+  ]);
+
+  const inCasa = new Set(inCamara.map((r) => r.produsId));
+
+  return randuri
+    .map((r) => ({
+      ...r,
+      categorie: r.categorie ?? "Altele",
+      ordineCategorie: r.ordineCategorie ?? 999,
+      inCasa: inCasa.has(r.id),
+    }))
+    .sort((a, b) => a.nume.localeCompare(b.nume, "ro"));
+}
+
+/**
+ * Produsul cu numele ăsta din catalog, sau unul nou dacă nu există.
+ *
+ * Rețetele cer lucruri care nu se cumpără des — anason, lapte de cocos — și n-are
+ * sens să fugi în alt ecran ca să le pui în catalog. Căutăm întâi fără să ținem
+ * cont de majuscule, ca „ceapă” să nu facă o a doua „Ceapă”.
+ */
+export async function produsDupaNume(nume: string) {
+  const curat = nume.trim();
+  if (!curat) return null;
+
+  const toate = await db
+    .select({ id: produse.id, nume: produse.nume, unitate: produse.unitate })
     .from(produse)
     .where(eq(produse.arhivat, false));
 
-  return randuri.sort((a, b) => a.nume.localeCompare(b.nume, "ro"));
+  const existent = toate.find((p) => p.nume.localeCompare(curat, "ro", { sensitivity: "base" }) === 0);
+  if (existent) return existent;
+
+  const numeFrumos = curat.charAt(0).toLocaleUpperCase("ro") + curat.slice(1);
+  const [nou] = await db
+    .insert(produse)
+    .values({ nume: numeFrumos })
+    .returning({ id: produse.id, nume: produse.nume, unitate: produse.unitate });
+
+  return nou;
 }
 
 /** Ce e acum în cămară dintr-o rețetă — pentru „s-a terminat ceva?” după gătit. */

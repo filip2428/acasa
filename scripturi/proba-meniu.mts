@@ -4,6 +4,8 @@ import {
   desparteCantitatea,
   motivulPropunerii,
   scorulRetetei,
+  textIngredient,
+  unitateaDeReteta,
   type DateDeScor,
 } from "../lib/servicii/socoteli-meniu.ts";
 
@@ -168,5 +170,13 @@ assert.deepEqual(
   { cantitate: null, unitate: null, nume: "piept de pui" },
   "„de” din mijlocul numelui nu se pierde",
 );
+
+/* ------------------------------------------- ingredient ales din catalog */
+
+assert.equal(textIngredient("Piept de pui", 500, "g"), "500 g piept de pui");
+assert.equal(textIngredient("Lapte 3,5%", 1.5, "l"), "1,5 l lapte 3,5%", "zecimalele cu virgulă");
+assert.equal(textIngredient("Sare", null, null), "Sare", "fără cantitate rămâne numele din catalog");
+assert.equal(unitateaDeReteta("kg"), "g", "la kilogram se cumpără, la gram se gătește");
+assert.equal(unitateaDeReteta("buc"), "buc");
 
 console.log("Probele meniului au trecut.");

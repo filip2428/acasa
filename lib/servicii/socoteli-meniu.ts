@@ -1,4 +1,4 @@
-import { cuDe } from "@/lib/formatare";
+import { cantitate as scrieCantitatea, cuDe } from "@/lib/formatare";
 
 /*
   Cum alegem ce se gătește.
@@ -120,4 +120,24 @@ export function desparteCantitatea(text: string) {
     unitate: potrivire[2]?.toLowerCase() ?? null,
     nume: potrivire[3].trim(),
   };
+}
+
+/**
+ * Cum se scrie în rețetă un ingredient ales din catalog: „500 g piept de pui”.
+ * Fără cantitate rămâne numele din catalog, cu majuscula lui.
+ */
+export function textIngredient(nume: string, cantitate: number | null, unitate: string | null) {
+  if (!cantitate) return nume;
+  const mic = nume.charAt(0).toLocaleLowerCase("ro") + nume.slice(1);
+  return `${scrieCantitatea(cantitate, unitate ?? "buc")} ${mic}`;
+}
+
+/** Unitățile în care se scriu rețetele, nu cele în care se cumpără. */
+export const UNITATI_RETETA = ["g", "kg", "ml", "l", "buc", "linguri", "linguriță", "cană"] as const;
+
+/** Produsul se cumpără la kilogram, dar în rețetă se cântărește în grame. */
+export function unitateaDeReteta(unitateaProdusului: string) {
+  if (unitateaProdusului === "kg") return "g";
+  if (unitateaProdusului === "l") return "ml";
+  return unitateaProdusului;
 }
