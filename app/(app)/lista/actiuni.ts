@@ -190,6 +190,7 @@ export async function finalizeazaLista(totalReal: number | null, inBuget = true)
 
   revalidatePath("/lista");
   revalidatePath("/bani");
+  revalidatePath("/bani/istoric");
   revalidatePath("/");
 
   return raspunsBuget;

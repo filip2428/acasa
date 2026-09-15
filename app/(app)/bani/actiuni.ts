@@ -43,6 +43,7 @@ export async function adaugaCheltuiala(
   );
 
   revalidatePath("/bani");
+  revalidatePath("/bani/istoric");
   revalidatePath("/");
   revalidatePath("/lista");
 
@@ -67,6 +68,7 @@ export async function reincearca() {
   await ceruteSesiune();
   const rezultat = await reincearcaTrimiterea();
   revalidatePath("/bani");
+  revalidatePath("/bani/istoric");
   return rezultat;
 }
 
@@ -75,6 +77,7 @@ export async function reimprospateazaBugetul(): Promise<StareaFoii> {
   await ceruteSesiune();
   const stare = await verificaFoaia();
   revalidatePath("/bani");
+  revalidatePath("/bani/istoric");
   revalidatePath("/lista");
   revalidatePath("/");
   return stare;

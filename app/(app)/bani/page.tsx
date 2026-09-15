@@ -1,9 +1,11 @@
+import Link from "next/link";
+
 import Antet from "@/componente/Antet";
 import { candFataDeAzi, lei, lunaCurenta } from "@/lib/formatare";
 import {
   bugetulLunii,
   cheltuieliNetrimise,
-  cheltuieliRecente,
+  rezumatulLunii,
   ultimaCitire,
   verificaFoaia,
 } from "@/lib/servicii/buget";
@@ -17,9 +19,9 @@ export const metadata = { title: "Bani — Acasă" };
 
 export default async function PaginaBani() {
   const conectat = areGoogle();
-  const [bugetCitit, recente, netrimise] = await Promise.all([
+  const [bugetCitit, trecute, netrimise] = await Promise.all([
     conectat ? bugetulLunii() : Promise.resolve([]),
-    cheltuieliRecente(12),
+    rezumatulLunii(),
     cheltuieliNetrimise(),
   ]);
 
@@ -63,7 +65,7 @@ export default async function PaginaBani() {
         ) : (
           <FormularCheltuiala
             categorii={categorii}
-            ultimaCategorie={recente[0]?.categorie ?? null}
+            ultimaCategorie={trecute.ultima?.categorie ?? null}
           />
         )}
 
@@ -81,27 +83,37 @@ export default async function PaginaBani() {
 
         {netrimise.length > 0 && <Netrimise cate={netrimise.length} />}
 
-        {recente.length > 0 && (
-          <section>
-            <h2 className="eticheta mb-1.5 px-1">Trecute din aplicație</h2>
-            <ul className="card card-lipit overflow-hidden">
-              {recente.map((t) => (
-                <li key={t.id} className="flex items-baseline gap-3 px-3.5 py-2.5">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[0.9375rem]">{t.categorie}</span>
-                    <span className="text-xs text-[var(--color-creion)]">
-                      {candFataDeAzi(t.data)}
-                      {t.descriere ? ` · ${t.descriere}` : ""}
-                      {t.sursa === "lista" ? " · din listă" : ""}
-                      {t.sursa === "bon" ? " · de pe bon" : ""}
-                    </span>
-                  </span>
-                  {!t.trimisLa && <span className="fisa fisa-caramida shrink-0">netrimis</span>}
-                  <span className="cifre shrink-0 text-sm">{lei(t.suma)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+        {(trecute.cate > 0 || trecute.ultima) && (
+          <Link href="/bani/istoric" className="card flex items-center gap-3 p-4">
+            <span className="min-w-0 flex-1">
+              <span className="eticheta">Istoric</span>
+              <span className="titlu mt-1 block truncate text-xl">
+                {trecute.cate === 0
+                  ? "Nimic luna asta"
+                  : `${trecute.cate === 1 ? "O cheltuială" : `${trecute.cate} cheltuieli`} · ${lei(trecute.suma, true)}`}
+              </span>
+              {trecute.ultima && (
+                <span className="mt-0.5 block truncate text-sm text-[var(--color-creion)]">
+                  Ultima: {trecute.ultima.categorie}, {lei(trecute.ultima.suma)},{" "}
+                  {candFataDeAzi(trecute.ultima.data)}
+                </span>
+              )}
+            </span>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-creion)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+              className="shrink-0"
+            >
+              <path d="m9 6 6 6-6 6" />
+            </svg>
+          </Link>
         )}
 
         {cuPlan.length > 0 && (

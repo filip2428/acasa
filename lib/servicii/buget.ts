@@ -4,7 +4,7 @@ import { and, desc, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { after } from "next/server";
 
 import { db } from "@/lib/db";
-import { bugetLunar, tranzactii } from "@/lib/db/schema";
+import { bugetLunar, persoane, tranzactii } from "@/lib/db/schema";
 import { lunaCurenta } from "@/lib/formatare";
 
 import { scrieTranzactii } from "./foaie-buget";
@@ -340,13 +340,39 @@ export async function trimiteCheltuieli(
   }
 }
 
-/** Cheltuielile trimise din aplicație, cele mai noi întâi. */
-export async function cheltuieliRecente(limita = 20) {
+/** Toate cheltuielile trecute din aplicație într-o lună, cu cine le-a trecut. */
+export async function cheltuieliLunii(luna: string) {
   return db
-    .select()
+    .select({
+      id: tranzactii.id,
+      data: tranzactii.data,
+      categorie: tranzactii.categorie,
+      suma: tranzactii.suma,
+      descriere: tranzactii.descriere,
+      sursa: tranzactii.sursa,
+      trimisLa: tranzactii.trimisLa,
+      cine: persoane.nume,
+    })
     .from(tranzactii)
-    .orderBy(desc(tranzactii.creatLa))
-    .limit(limita);
+    .leftJoin(persoane, eq(tranzactii.adaugatDe, persoane.id))
+    .where(eq(tranzactii.luna, luna))
+    .orderBy(desc(tranzactii.data), desc(tranzactii.creatLa));
+}
+
+/** Pentru cardul de pe Bani: câte, cât și care a fost ultima, fără lista întreagă. */
+export async function rezumatulLunii(luna = lunaCurenta()) {
+  const [[total], [ultima]] = await Promise.all([
+    db
+      .select({ cate: sql<number>`count(*)`, suma: sql<number>`coalesce(sum(${tranzactii.suma}), 0)` })
+      .from(tranzactii)
+      .where(eq(tranzactii.luna, luna)),
+    db
+      .select({ categorie: tranzactii.categorie, data: tranzactii.data, suma: tranzactii.suma })
+      .from(tranzactii)
+      .orderBy(desc(tranzactii.creatLa))
+      .limit(1),
+  ]);
+  return { cate: total?.cate ?? 0, suma: total?.suma ?? 0, ultima: ultima ?? null };
 }
 
 /** Cheltuieli rămase netrimise, ca să le putem reîncerca. */

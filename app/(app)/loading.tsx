@@ -25,6 +25,7 @@ const SECTIUNI: [prefix: string, nume: string][] = [
   ["/casa/bagaje", "Casa · Bagaje"],
   ["/casa", "Casa"],
   ["/ciclu", "Ciclul"],
+  ["/bani/istoric", "Bani · Istoric"],
   ["/bani", "Bani"],
   ["/setari", "Setări"],
 ];
