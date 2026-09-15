@@ -2,10 +2,17 @@
 
 import { useOptimistic, useState, useTransition } from "react";
 
+import AlegeCategoria from "@/componente/AlegeCategoria";
 import { citesteSuma, lei, sumaInCamp } from "@/lib/formatare";
 import type { ArticolAfisat } from "@/lib/servicii/lista";
 
-import { comutaBifat, schimbaCantitatea, schimbaPretul, stergeArticol } from "./actiuni";
+import {
+  comutaBifat,
+  puneInCategorie,
+  schimbaCantitatea,
+  schimbaPretul,
+  stergeArticol,
+} from "./actiuni";
 
 /*
   Un rând din listă.
@@ -15,7 +22,13 @@ import { comutaBifat, schimbaCantitatea, schimbaPretul, stergeArticol } from "./
   greș, `useOptimistic` readuce singur valoarea reală la revalidare.
 */
 
-export default function Articol({ articol }: { articol: ArticolAfisat }) {
+export default function Articol({
+  articol,
+  categorii,
+}: {
+  articol: ArticolAfisat;
+  categorii: { id: number; nume: string }[];
+}) {
   const [, porneste] = useTransition();
   const [bifat, bifaOptimist] = useOptimistic(articol.bifat);
   const [deschis, setDeschis] = useState(false);
@@ -119,6 +132,16 @@ export default function Articol({ articol }: { articol: ArticolAfisat }) {
           >
             Șterge
           </button>
+
+          <div className="w-full">
+            <AlegeCategoria
+              categorii={categorii}
+              valoare={articol.categorieId}
+              eticheta={`Categoria pentru ${articol.nume}`}
+              onAlege={(id) => porneste(() => puneInCategorie(articol.id, id))}
+              className="camp h-10 max-h-10 min-h-0 px-2.5 text-sm"
+            />
+          </div>
         </div>
       )}
     </div>

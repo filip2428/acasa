@@ -18,6 +18,7 @@ const SECTIUNI: [prefix: string, nume: string][] = [
   ["/mese", "Mese"],
   ["/lista", "Cumpărături"],
   ["/camara", "Cămară"],
+  ["/produse/categorii", "Catalog · Categorii"],
   ["/produse", "Catalog"],
   ["/casa/calendar", "Casa · Calendar"],
   ["/casa/zone", "Casa · Zone"],

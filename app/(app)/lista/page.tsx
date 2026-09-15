@@ -4,7 +4,13 @@ import Antet from "@/componente/Antet";
 import { lei } from "@/lib/formatare";
 import { categorieDinBuget } from "@/lib/servicii/buget";
 import { areGoogle } from "@/lib/servicii/google";
-import { articoleleListei, listaCurenta, peCategorii, totaluri } from "@/lib/servicii/lista";
+import {
+  articoleleListei,
+  categoriileActive,
+  listaCurenta,
+  peCategorii,
+  totaluri,
+} from "@/lib/servicii/lista";
 
 import Articol from "./Articol";
 import CampAdaugare from "./CampAdaugare";
@@ -14,10 +20,14 @@ export const metadata = { title: "Listă — Acasă" };
 
 export default async function PaginaLista() {
   const lista = await listaCurenta();
-  const articole = await articoleleListei(lista.id);
+  const [articole, bugetMancare, categorii] = await Promise.all([
+    articoleleListei(lista.id),
+    categorieDinBuget("Mâncare"),
+    categoriileActive(),
+  ]);
   const grupe = peCategorii(articole);
   const sume = totaluri(articole);
-  const bugetMancare = await categorieDinBuget("Mâncare");
+  const alegeri = categorii.map((c) => ({ id: c.id, nume: c.nume }));
 
   const deBifat = articole.filter((a) => !a.bifat).length;
 
@@ -111,7 +121,7 @@ export default async function PaginaLista() {
               <h2 className="eticheta mb-1.5 px-1">{grupa.nume}</h2>
               <div className="card card-lipit overflow-hidden">
                 {grupa.articole.map((articol) => (
-                  <Articol key={articol.id} articol={articol} />
+                  <Articol key={articol.id} articol={articol} categorii={alegeri} />
                 ))}
               </div>
             </section>

@@ -7,6 +7,12 @@ import { db } from "@/lib/db";
 import { preturi, produse } from "@/lib/db/schema";
 import { azi } from "@/lib/formatare";
 import {
+  actualizeazaCategorie,
+  creeazaCategorie,
+  mutaCategorie,
+  scoateCategorie,
+} from "@/lib/servicii/categorii";
+import {
   actualizeazaRitmul,
   cautaInOpenFoodFacts,
   produsDupaCodBare,
@@ -99,4 +105,42 @@ export async function arhiveazaProdus(id: number) {
   // Nu ștergem: istoricul de prețuri și listele vechi trimit la produsul ăsta.
   await db.update(produse).set({ arhivat: true }).where(eq(produse.id, id));
   revalidatePath("/produse");
+}
+
+/* ------------------------------------------------------------- categorii */
+
+// Categoriile schimbă ordinea listei, catalogul, cămara și ingredientele.
+function reimprospateazaCategoriile() {
+  revalidatePath("/produse");
+  revalidatePath("/produse/categorii");
+  revalidatePath("/lista");
+  revalidatePath("/camara");
+}
+
+export async function adaugaCategorie(nume: string, categorieBuget: string | null = null) {
+  await ceruteSesiune();
+  const noua = await creeazaCategorie(nume, categorieBuget);
+  reimprospateazaCategoriile();
+  return noua;
+}
+
+export async function schimbaCategoria(
+  id: number,
+  schimbari: { nume?: string; categorieBuget?: string | null },
+) {
+  await ceruteSesiune();
+  await actualizeazaCategorie(id, schimbari);
+  reimprospateazaCategoriile();
+}
+
+export async function mutaCategoria(id: number, directie: -1 | 1) {
+  await ceruteSesiune();
+  await mutaCategorie(id, directie);
+  reimprospateazaCategoriile();
+}
+
+export async function scoateCategoria(id: number) {
+  await ceruteSesiune();
+  await scoateCategorie(id);
+  reimprospateazaCategoriile();
 }

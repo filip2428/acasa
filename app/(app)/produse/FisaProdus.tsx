@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useTransition } from "react";
 
+import AlegeCategoria from "@/componente/AlegeCategoria";
 import CampSuma from "@/componente/CampSuma";
 import type { Categorie } from "@/lib/db/schema";
 import type { ProdusDinCatalog } from "@/lib/servicii/produse";
@@ -99,21 +100,16 @@ export default function FisaProdus({
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <label>
+          <div className="col-span-2">
             <span className="eticheta">Categorie</span>
-            <select
-              value={date.categorieId ?? ""}
-              onChange={(e) => schimba("categorieId", e.target.value ? Number(e.target.value) : null)}
-              className="camp mt-1"
-            >
-              <option value="">Fără categorie</option>
-              {categorii.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nume}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="mt-1">
+              <AlegeCategoria
+                categorii={categorii}
+                valoare={date.categorieId}
+                onAlege={(id) => schimba("categorieId", id)}
+              />
+            </div>
+          </div>
 
           <label>
             <span className="eticheta">Unitate</span>

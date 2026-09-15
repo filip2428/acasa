@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { articoleLista, liste, magazine, produse } from "@/lib/db/schema";
 import { azi } from "@/lib/formatare";
 import { trimiteCheltuieli } from "@/lib/servicii/buget";
+import { categorieArticol } from "@/lib/servicii/categorii";
 import { areGoogle } from "@/lib/servicii/google";
 import { cautaProduse, listaCurenta, sumePentruBuget } from "@/lib/servicii/lista";
 import { ceruteSesiune } from "@/lib/sesiune";
@@ -200,4 +201,12 @@ export async function finalizeazaLista(totalReal: number | null, inBuget = true)
 export async function cauta(termen: string) {
   await ceruteSesiune();
   return cautaProduse(termen);
+}
+
+/** Mută un articol într-o categorie; data viitoare produsul vine singur acolo. */
+export async function puneInCategorie(articolId: number, categorieId: number | null) {
+  await ceruteSesiune();
+  await categorieArticol(articolId, categorieId);
+  revalidatePath("/lista");
+  revalidatePath("/produse");
 }

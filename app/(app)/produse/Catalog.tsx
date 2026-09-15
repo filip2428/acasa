@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 
 import type { Categorie } from "@/lib/db/schema";
@@ -168,6 +169,10 @@ export default function Catalog({
       >
         Adaugă un produs
       </button>
+
+      <Link href="/produse/categorii" className="buton buton-secundar w-full">
+        Categorii ({categorii.length})
+      </Link>
 
       <Scaner
         deschis={scanerDeschis}
