@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 
-import { lei } from "@/lib/formatare";
+import { citesteSuma, lei } from "@/lib/formatare";
 
 import { finalizeazaLista, golesteBifate } from "./actiuni";
 
@@ -81,10 +81,9 @@ export default function Finalizare({
       <label className="block">
         <span className="eticheta">Totalul de pe bon</span>
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
-          step="0.01"
-          min="0"
+          autoComplete="off"
           value={totalReal}
           onChange={(e) => setTotalReal(e.target.value)}
           placeholder={total > 0 ? lei(total).replace(" lei", "") : "0,00"}
@@ -129,7 +128,7 @@ export default function Finalizare({
           onClick={() =>
             porneste(async () => {
               const rezultat = await finalizeazaLista(
-                totalReal === "" ? null : Number(totalReal),
+                citesteSuma(totalReal),
                 inBuget,
               );
               setDeschis(false);

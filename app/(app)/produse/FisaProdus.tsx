@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useTransition } from "react";
 
+import CampSuma from "@/componente/CampSuma";
 import type { Categorie } from "@/lib/db/schema";
 import type { ProdusDinCatalog } from "@/lib/servicii/produse";
 
@@ -131,13 +132,9 @@ export default function FisaProdus({
 
           <label>
             <span className="eticheta">Preț</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0"
-              value={date.pret ?? ""}
-              onChange={(e) => schimba("pret", e.target.value === "" ? null : Number(e.target.value))}
+            <CampSuma
+              valoare={date.pret}
+              onValoare={(v) => schimba("pret", v)}
               className="camp cifre mt-1"
               placeholder="0,00"
             />
@@ -145,13 +142,9 @@ export default function FisaProdus({
 
           <label>
             <span className="eticheta">Cantitate obișnuită</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.25"
-              min="0"
-              value={date.cantitateImplicita}
-              onChange={(e) => schimba("cantitateImplicita", Number(e.target.value))}
+            <CampSuma
+              valoare={date.cantitateImplicita}
+              onValoare={(v) => v != null && schimba("cantitateImplicita", v)}
               className="camp cifre mt-1"
             />
           </label>

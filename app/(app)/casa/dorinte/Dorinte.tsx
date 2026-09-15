@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 
+import CampSuma from "@/componente/CampSuma";
 import { lei } from "@/lib/formatare";
 
 import {
@@ -211,13 +212,9 @@ function Fisa({ date: initiale, laInchidere }: { date: DateDorinta; laInchidere:
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label>
             <span className="eticheta">Cam cât</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="1"
-              min="0"
-              value={date.pret ?? ""}
-              onChange={(e) => schimba("pret", e.target.value === "" ? null : Number(e.target.value))}
+            <CampSuma
+              valoare={date.pret}
+              onValoare={(v) => schimba("pret", v)}
               className="camp cifre mt-1"
               placeholder="0"
             />

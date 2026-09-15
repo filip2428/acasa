@@ -45,10 +45,9 @@ export default function FormularCheltuiala({
           <span className="eticheta">Cât</span>
           <input
             name="suma"
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.01"
-            min="0.01"
+            autoComplete="off"
             required
             placeholder="0,00"
             className="camp cifre mt-1 text-lg"

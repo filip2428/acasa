@@ -2,7 +2,7 @@
 
 import { useOptimistic, useState, useTransition } from "react";
 
-import { lei } from "@/lib/formatare";
+import { citesteSuma, lei, sumaInCamp } from "@/lib/formatare";
 import type { ArticolAfisat } from "@/lib/servicii/lista";
 
 import { comutaBifat, schimbaCantitatea, schimbaPretul, stergeArticol } from "./actiuni";
@@ -96,14 +96,13 @@ export default function Articol({ articol }: { articol: ArticolAfisat }) {
           <label className="flex items-center gap-1.5">
             <span className="sr-only">Preț pe {articol.unitate}</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.01"
-              min="0"
-              defaultValue={articol.pretEstimat ?? ""}
+              autoComplete="off"
+              defaultValue={sumaInCamp(articol.pretEstimat)}
               placeholder="preț"
               onBlur={(e) => {
-                const nou = e.target.value === "" ? null : Number(e.target.value);
+                const nou = citesteSuma(e.target.value);
                 if (nou !== articol.pretEstimat) {
                   porneste(() => schimbaPretul(articol.id, nou));
                 }

@@ -16,6 +16,23 @@ export function lei(suma: number | null | undefined, rotund = false) {
   return `${(rotund ? LEI_ROTUND : LEI).format(suma)} lei`;
 }
 
+/**
+ * O sumă scrisă de mână: „12,40”, „12.40”, „ 12 ”. Tastatura numerică de pe
+ * iPhone în română are doar virgulă, deci o primim la fel ca punctul. Null dacă
+ * nu e un număr.
+ */
+export function citesteSuma(text: string) {
+  const curat = text.trim().replace(/\s/g, "").replace(",", ".");
+  if (!curat) return null;
+  const numar = Number(curat);
+  return Number.isFinite(numar) ? Math.round(numar * 100) / 100 : null;
+}
+
+/** Suma în câmp, cu virgulă: 12.4 → „12,4”. */
+export function sumaInCamp(suma: number | null | undefined) {
+  return suma == null ? "" : String(suma).replace(".", ",");
+}
+
 /** Cantitatea fără zerouri inutile: „1 buc”, „0,5 kg”, „250 g”. */
 export function cantitate(valoare: number, unitate: string) {
   const numar = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 2 }).format(valoare);

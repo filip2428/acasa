@@ -9,6 +9,7 @@ import {
   type RezultatTrimitere,
   type StareaFoii,
 } from "@/lib/servicii/buget";
+import { citesteSuma } from "@/lib/formatare";
 import { ceruteSesiune } from "@/lib/sesiune";
 
 export type StareCheltuiala = {
@@ -28,7 +29,7 @@ export async function adaugaCheltuiala(
   const sesiune = await ceruteSesiune();
 
   const categorie = String(date.get("categorie") ?? "").trim();
-  const suma = Number(String(date.get("suma") ?? "").replace(",", "."));
+  const suma = citesteSuma(String(date.get("suma") ?? "")) ?? NaN;
   const data = String(date.get("data") ?? "").trim();
   const descriere = String(date.get("descriere") ?? "").trim();
 
