@@ -380,6 +380,15 @@ export function citesteNotaDepozit(nota: string) {
   return { start: m ? `${m[3]}-${m[2]}-${m[1]}` : null, luni: l ? Number(l[1]) : null };
 }
 
+/**
+ * Numele produsului după prelungire. Se schimbă doar termenul dintr-un nume pus
+ * de aplicație („Depozit 3 luni”); „Fidelis 2027” rămâne cum l-ai numit.
+ */
+export function produsDupaPrelungire(produs: string, luni: number) {
+  const m = /^(Depozit|Titluri de stat) \d+ luni$/.exec(produs.trim());
+  return m ? `${m[1]} ${luni} luni` : produs;
+}
+
 /* ------------------------------------------------------------ fondurile */
 
 export type Tinta = { tinta: number | null; panaLa: string | null };

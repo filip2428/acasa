@@ -17,6 +17,7 @@ import {
   luniIntre,
   numar,
   procenteRegula,
+  produsDupaPrelungire,
   scopDinFinantare,
   sumarLuna,
   surseDinEconomii,
@@ -133,6 +134,10 @@ assert.equal(dobandaNeta(10000, 0.07, 365, false, 0.1), 630);
 assert.equal(dobandaNeta(10000, 0.07, 365, true, 0.1), 700);
 assert.equal(costDupaRetragere(840, 890, 89), 756);
 assert.deepEqual(citesteNotaDepozit("constituit 05.11.2026 · 6 luni"), { start: "2026-11-05", luni: 6 });
+assert.equal(produsDupaPrelungire("Depozit 3 luni", 6), "Depozit 6 luni");
+assert.equal(produsDupaPrelungire("Titluri de stat 12 luni", 24), "Titluri de stat 24 luni");
+assert.equal(produsDupaPrelungire("Fidelis 2027", 12), "Fidelis 2027", "numele pus de mână rămâne");
+assert.equal(produsDupaPrelungire("", 12), "");
 const baza = costDeBaza([luna]);
 assert.deepEqual(baza, { baza: 150, cuTampon: 187.5 });
 console.log("✓ curs, dobândă (cu și fără impozit), cost la retragere, cost de bază");

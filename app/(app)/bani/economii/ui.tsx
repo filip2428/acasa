@@ -1,8 +1,20 @@
 import Link from "next/link";
 
+import Raspuns from "@/componente/Raspuns";
+
 /*
   Piese mici, fără stare, pentru ecranele de economii.
 */
+
+/** Ce rămâne pe ecran după o operație care nu trebuie repetată din greșeală. */
+export function Confirmare({ mesaj }: { mesaj: string }) {
+  return (
+    <section className="card space-y-3 p-4">
+      <Raspuns stare={{ mesaj }} />
+      <Link href="/bani/economii" className="buton buton-principal w-full">Înapoi la economii</Link>
+    </section>
+  );
+}
 
 export function Bara({ procent, culoare = "var(--color-smalt-viu)" }: { procent: number; culoare?: string }) {
   const p = Math.max(0, Math.min(100, Math.round(procent * 100)));

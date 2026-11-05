@@ -8,6 +8,7 @@ import { lei } from "@/lib/formatare";
 import type { ContPeEcran } from "@/lib/servicii/model-buget";
 
 import { inchideCont } from "../actiuni";
+import { Confirmare } from "../ui";
 
 /*
   Închide un cont sau vinde o investiție: banii rămași merg în alt cont (și în
@@ -17,7 +18,8 @@ import { inchideCont } from "../actiuni";
 
 export default function Inchide({ conturi, ales }: { conturi: ContPeEcran[]; ales: number | null }) {
   const [rand, setRand] = useState(ales && conturi.some((c) => c.rand === ales) ? ales : conturi[0]?.rand ?? null);
-  const c = conturi.find((x) => x.rand === rand);
+  // Lista poate veni reîmprospătată înaintea răspunsului, fără contul închis.
+  const c = conturi.find((x) => x.rand === rand) ?? conturi[0];
   const implicit = (x: ContPeEcran | undefined) =>
     conturi.find((d) => x && d.rand !== x.rand && !d.cuScadenta && d.moneda === x.moneda && d.lichiditate === "Imediat")?.rand ?? "afara";
   const [dest, setDest] = useState<number | "afara">(implicit(c));
@@ -27,7 +29,9 @@ export default function Inchide({ conturi, ales }: { conturi: ContPeEcran[]; ale
   const [confirmat, setConfirmat] = useState(false);
   const [stare, setStare] = useState<StareRaspuns>({});
   const [seTrimite, porneste] = useTransition();
+  const [gata, setGata] = useState<string | null>(null);
 
+  if (gata) return <Confirmare mesaj={gata} />;
   if (!c) return <p className="card p-4 text-[var(--color-creion)]">Nu ai conturi în foaia Economii.</p>;
   const d = dest === "afara" ? null : conturi.find((x) => x.rand === dest);
   const total = c.sold + (c.cuScadenta ? dobanda ?? 0 : 0);
@@ -40,13 +44,14 @@ export default function Inchide({ conturi, ales }: { conturi: ContPeEcran[]; ale
       e.preventDefault();
       porneste(async () => {
         const r = await inchideCont({ rand: c.rand, destinatie: dest, primit: alta ? primit ?? primitCalculat : null, dobanda: dobanda ?? 0, nota });
+        if (r.mesaj) { setGata(r.mesaj); return; }
         setStare(r);
         setConfirmat(false);
       });
     }}>
       <label className="block">
         <span className="eticheta">Ce închizi</span>
-        <select value={rand ?? ""} onChange={(e) => { const r = Number(e.target.value); setRand(r); setDest(implicit(conturi.find((x) => x.rand === r))); setPrimit(null); setStare({}); }} className="camp mt-1">
+        <select value={c.rand} onChange={(e) => { const r = Number(e.target.value); setRand(r); setDest(implicit(conturi.find((x) => x.rand === r))); setPrimit(null); setStare({}); }} className="camp mt-1">
           {conturi.map((x) => <option key={x.rand} value={x.rand}>{x.eticheta} — {lei(x.sold).replace(" lei", ` ${x.moneda}`)}</option>)}
         </select>
       </label>

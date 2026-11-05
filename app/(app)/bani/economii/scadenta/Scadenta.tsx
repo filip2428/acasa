@@ -8,17 +8,32 @@ import { lei, ziLunga } from "@/lib/formatare";
 import type { ContPeEcran } from "@/lib/servicii/model-buget";
 
 import { scadenta } from "../actiuni";
+import { Confirmare } from "../ui";
 
 type Depozit = ContPeEcran & { luni: number | null; zileRamase: number | null; dobandaEstimata: number; estimataSigur: boolean };
+type Proprietati = { depozite: Depozit[]; conturi: ContPeEcran[]; ales: number | null };
 
 /*
   La scadență: dobânda precompletată (corecteaz-o cu cea din aplicația băncii),
   apoi prelungești — cu dobânda în depozit sau într-un cont — ori lichidezi.
+
+  După o operație reușită formularul dispare: rămas pe ecran, ar putea adăuga
+  dobânda a doua oară, iar un depozit lichidat nici nu mai e în listă.
 */
 
-export default function Scadenta({ depozite, conturi, ales }: { depozite: Depozit[]; conturi: ContPeEcran[]; ales: number | null }) {
+export default function Scadenta(proprietati: Proprietati) {
+  const [gata, setGata] = useState<string | null>(null);
+  if (gata) return <Confirmare mesaj={gata} />;
+  if (!proprietati.depozite.length) {
+    return <p className="card p-4 text-[0.9375rem] text-[var(--color-creion)]">Nu ai depozite sau titluri de stat cu sold.</p>;
+  }
+  return <Formular {...proprietati} laSucces={setGata} />;
+}
+
+function Formular({ depozite, conturi, ales, laSucces }: Proprietati & { laSucces: (mesaj: string) => void }) {
   const [rand, setRand] = useState(ales && depozite.some((d) => d.rand === ales) ? ales : depozite[0].rand);
-  const dep = depozite.find((d) => d.rand === rand)!;
+  // Lista poate veni reîmprospătată înaintea răspunsului, fără depozitul ales.
+  const dep = depozite.find((d) => d.rand === rand) ?? depozite[0];
   const inMoneda = conturi.filter((c) => c.moneda === dep.moneda);
   const [dobanda, setDobanda] = useState<number | null>(dep.dobandaEstimata || null);
   const [actiune, setActiune] = useState<"prelungeste" | "lichideaza">("prelungeste");
@@ -47,14 +62,18 @@ export default function Scadenta({ depozite, conturi, ales }: { depozite: Depozi
   return (
     <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault();
-      porneste(async () => setStare(await scadenta({
-        rand, dobanda: dobanda ?? 0, actiune, rataNoua: rata ?? 0, luni, capitalizeaza, contDobanda: contAles, contLichidare: contAles,
-      })));
+      porneste(async () => {
+        const r = await scadenta({
+          rand: dep.rand, dobanda: dobanda ?? 0, actiune, rataNoua: rata ?? 0, luni, capitalizeaza, contDobanda: contAles, contLichidare: contAles,
+        });
+        if (r.mesaj) laSucces(r.mesaj);
+        else setStare(r);
+      });
     }}>
       <section className="card space-y-3 p-4">
         <label className="block">
           <span className="eticheta">Depozitul</span>
-          <select value={rand} onChange={(e) => alege(Number(e.target.value))} className="camp mt-1">
+          <select value={dep.rand} onChange={(e) => alege(Number(e.target.value))} className="camp mt-1">
             {depozite.map((d) => (
               <option key={d.rand} value={d.rand}>
                 {d.eticheta} · {d.zileRamase == null ? "fără scadență" : d.zileRamase < 0 ? `scadent de ${-d.zileRamase} zile` : d.zileRamase === 0 ? "scadent azi" : `în ${d.zileRamase} zile`}

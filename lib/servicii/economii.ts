@@ -24,6 +24,7 @@ import {
   GUILT_FREE,
   INVESTITII,
   numar,
+  produsDupaPrelungire,
   r2,
   scopDinFinantare,
   sumarLuna,
@@ -359,7 +360,7 @@ export async function scadenta(d: {
       }
     }
     scrieri.push(
-      { range: interval(ECONOMII, `B${dep.rand}`), values: [[`Depozit ${luni} luni`]] },
+      { range: interval(ECONOMII, `B${dep.rand}`), values: [[produsDupaPrelungire(dep.produs, luni)]] },
       { range: interval(ECONOMII, `I${dep.rand}`), values: [[rata]] },
       { range: interval(ECONOMII, `L${dep.rand}`), values: [[noua]] },
       { range: interval(ECONOMII, `Q${dep.rand}:R${dep.rand}`), values: [[ziuaDeAzi(), `constituit ${ziCuPuncte(start)} · ${luni} luni`]] },

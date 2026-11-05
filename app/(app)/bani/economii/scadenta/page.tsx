@@ -36,9 +36,7 @@ export default async function PaginaScadenta({ searchParams }: { searchParams: P
     <main>
       <Antet supratitlu="Economii" titlu="Depozit la scadență" inapoi={inapoi} />
       <div className="mx-auto -mt-5 max-w-lg space-y-4 px-4">
-        {depozite.length
-          ? <Scadenta depozite={depozite} conturi={stare.economii.conturi.filter((c) => !areScadenta(c)).map(contPeEcran)} ales={Number(cont) || null} />
-          : <p className="card p-4 text-[0.9375rem] text-[var(--color-creion)]">Nu ai depozite sau titluri de stat cu sold.</p>}
+        <Scadenta depozite={depozite} conturi={stare.economii.conturi.filter((c) => !areScadenta(c)).map(contPeEcran)} ales={Number(cont) || null} />
       </div>
     </main>
   );
