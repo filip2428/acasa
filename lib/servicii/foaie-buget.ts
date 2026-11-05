@@ -2,6 +2,7 @@ import "server-only";
 
 import { citesteAsezarea, litere, verificaIntervalul } from "./asezare-foaie";
 import { cereGoogle } from "./google";
+import { citesteLuna } from "./model-buget";
 
 /*
   Scrisul în foaia Buget_Familial.
@@ -60,6 +61,13 @@ export async function asiguraFoaiaLunii(luna: string) {
     }),
   });
 
+  // Titlul cu luna: rândul „Venit ocazional” și zeciuiala din venitul ocazional
+  // își iau luna din A1. Altfel arată 0 până deschide cineva foaia.
+  await cereGoogle(
+    `${SHEETS}/${sheetId()}/values/${encodeURIComponent(`'${luna}'!A1`)}?valueInputOption=RAW`,
+    { method: "PUT", body: JSON.stringify({ values: [[`BUGET LUNAR — ${luna}`]] }) },
+  );
+
   return { creata: true };
 }
 
@@ -68,6 +76,8 @@ export type TranzactieDeScris = {
   categorie: string;
   suma: number;
   descriere?: string | null;
+  /** „Din Fond Tech” etc. Gol = venitul lunii. Se scrie doar dacă foaia are coloana. */
+  finantare?: string | null;
 };
 
 export type RezultatScriere = {
@@ -101,10 +111,19 @@ export async function scrieTranzactii(
     );
   }
 
+  // Coloana de categorii din foaie acceptă doar categoriile din tabelul lunii:
+  // verificăm înainte, ca să nu rămână o scriere pe jumătate.
+  const deLuna = new Set(citesteLuna(citit.values ?? []).categorii.map((c) => c.nume));
+  const lipsa = [...new Set(tranzactii.map((t) => t.categorie))].filter((c) => !deLuna.has(c));
+  if (deLuna.size > 0 && lipsa.length > 0) {
+    throw new Error(`Luna ${luna} n-are în tabel: ${lipsa.join(", ")}. Nu am scris nimic.`);
+  }
+
+  const cuFinantare = asezare.coloanaFinantare != null;
   const de_la = asezare.randUrmator;
   const pana_la = de_la + tranzactii.length - 1;
-  const interval = `${luna}!${litere(asezare.coloanaData)}${de_la}:${litere(
-    asezare.coloanaDescriere,
+  const interval = `'${luna}'!${litere(asezare.coloanaData)}${de_la}:${litere(
+    cuFinantare ? asezare.coloanaFinantare! : asezare.coloanaDescriere,
   )}${pana_la}`;
 
   await cereGoogle(
@@ -112,7 +131,10 @@ export async function scrieTranzactii(
     {
       method: "PUT",
       body: JSON.stringify({
-        values: tranzactii.map((t) => [t.data, t.categorie, t.suma, t.descriere ?? ""]),
+        values: tranzactii.map((t) => {
+          const rand = [t.data, t.categorie, t.suma, t.descriere ?? ""];
+          return cuFinantare ? [...rand, t.finantare ?? ""] : rand;
+        }),
       }),
     },
   );

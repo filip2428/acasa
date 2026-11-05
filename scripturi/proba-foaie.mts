@@ -56,6 +56,18 @@ assert.equal(litere(citesteAsezarea(mutat)!.coloanaData), "J");
 
 assert.equal(citesteAsezarea([["ceva"], ["altceva"]]), null);
 
+// Foaia v2: a cincea coloană „Finanțat din”. Un rând cu ceva doar în ea tot ocupă locul.
+const v2 = foaie.map((r) => r.slice());
+v2[3] = [...v2[3], "Finanțat din"];
+v2[6] = [...v2[6], "Din Fond Tech"];
+const a2 = citesteAsezarea(v2)!;
+assert.equal(litere(a2.coloanaFinantare!), "L");
+assert.equal(a2.randUrmator, 8);
+const doarL = v2.map((r) => r.slice());
+doarL[7] = ["", "", "", "", "", "", "", "", "", "", "", "Din Fond Tech"];
+assert.equal(citesteAsezarea(doarL)!.randUrmator, 9);
+assert.equal(citesteAsezarea(foaie)!.coloanaFinantare, null, "foile vechi n-au coloana");
+
 assert.equal(litere(1), "A");
 assert.equal(litere(8), "H");
 assert.equal(litere(26), "Z");

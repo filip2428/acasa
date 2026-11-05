@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import Antet from "@/componente/Antet";
 import { candFataDeAzi, lei, lunaCurenta } from "@/lib/formatare";
@@ -14,6 +15,7 @@ import { areGoogle } from "@/lib/servicii/google";
 import FormularCheltuiala from "./FormularCheltuiala";
 import Netrimise from "./Netrimise";
 import Reimprospateaza from "./Reimprospateaza";
+import SumarLunii, { SumarSeIncarca } from "./SumarLunii";
 
 export const metadata = { title: "Bani — Acasă" };
 
@@ -82,6 +84,12 @@ export default async function PaginaBani() {
         )}
 
         {netrimise.length > 0 && <Netrimise cate={netrimise.length} />}
+
+        {conectat && (
+          <Suspense fallback={<SumarSeIncarca />}>
+            <SumarLunii />
+          </Suspense>
+        )}
 
         {(trecute.cate > 0 || trecute.ultima) && (
           <Link href="/bani/istoric" className="card flex items-center gap-3 p-4">
