@@ -25,6 +25,8 @@ export type Asezare = {
   coloanaCategorie: number;
   coloanaSuma: number;
   coloanaDescriere: number;
+  /** Coloana „Finanțat din” (foaia v2), sau null în foile mai vechi. */
+  coloanaFinantare: number | null;
   /** Primul rând liber de sub ultima tranzacție. */
   randUrmator: number;
 };
@@ -39,11 +41,15 @@ export function citesteAsezarea(randuri: unknown[][]): Asezare | null {
     if (text(rand[cData + 1]) !== "categorie") continue;
     if (text(rand[cData + 2]) !== "sumă") continue;
 
+    // Foaia v2 are a cincea coloană, „Finanțat din” (gol = venitul lunii).
+    const areFinantare = text(rand[cData + 4]) === "finanțat din";
+    const latime = areFinantare ? 5 : 4;
+
     // Ultimul rând cu ceva în blocul de tranzacții. Căutăm până la capăt, nu
     // până la primul gol: foile reale au rânduri goale în mijlocul listei.
     let ultimul = r;
     for (let i = r + 1; i < randuri.length; i++) {
-      const celule = (randuri[i] ?? []).slice(cData, cData + 4);
+      const celule = (randuri[i] ?? []).slice(cData, cData + latime);
       if (celule.some((c) => String(c ?? "").trim() !== "")) ultimul = i;
     }
 
@@ -53,6 +59,7 @@ export function citesteAsezarea(randuri: unknown[][]): Asezare | null {
       coloanaCategorie: cData + 2,
       coloanaSuma: cData + 3,
       coloanaDescriere: cData + 4,
+      coloanaFinantare: areFinantare ? cData + 5 : null,
       randUrmator: ultimul + 2,
     };
   }

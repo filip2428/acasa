@@ -187,7 +187,7 @@ export async function ultimaCitire(luna = lunaCurenta()) {
 export type StareaFoii = { ok: true; categorii: number } | { ok: false; motiv: string };
 
 /** Traduce ce a răspuns Google în ce e de reparat, și unde. */
-function explicaEroarea(eroare: unknown, luna: string) {
+export function explicaEroarea(eroare: unknown, luna: string) {
   const cod = codulErorii(eroare);
   const text = eroare instanceof Error ? eroare.message : String(eroare);
 

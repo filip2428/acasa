@@ -4,14 +4,19 @@
   primul card din pagină urcă peste el ca să lege cele două suprafețe.
 */
 
+import Link from "next/link";
+
 export default function Antet({
   supratitlu,
   titlu,
   dreapta,
+  inapoi,
 }: {
   supratitlu?: string;
   titlu: string;
   dreapta?: React.ReactNode;
+  /** Pentru paginile de sub o secțiune: instalată pe iPhone, aplicația n-are buton de înapoi. */
+  inapoi?: { href: string; eticheta: string };
 }) {
   return (
     <header
@@ -20,6 +25,15 @@ export default function Antet({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
+          {inapoi && (
+            <Link
+              href={inapoi.href}
+              className="-ml-1 mb-1 inline-flex min-h-[2.75rem] items-center gap-1 pr-3 text-sm font-semibold text-white/75"
+            >
+              <span aria-hidden className="text-lg leading-none">‹</span>
+              {inapoi.eticheta}
+            </Link>
+          )}
           {supratitlu && (
             <p className="eticheta text-white/55">{supratitlu}</p>
           )}
