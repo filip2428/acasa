@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import type { StareRaspuns } from "@/componente/Raspuns";
 import { db } from "@/lib/db";
 import { tranzactii } from "@/lib/db/schema";
+import { lunaCurenta } from "@/lib/formatare";
+import { SURSA_ECONOMII, uitaCopiaBugetului } from "@/lib/servicii/buget";
 import * as economii from "@/lib/servicii/economii";
 import { ceruteSesiune } from "@/lib/sesiune";
 
@@ -14,10 +16,12 @@ import { ceruteSesiune } from "@/lib/sesiune";
   sau eroarea, în cuvinte. Nimic nu aruncă spre ecran.
 */
 
-async function ruleaza(fn: () => Promise<string>): Promise<StareRaspuns> {
+async function ruleaza(fn: () => Promise<string>, luna = lunaCurenta()): Promise<StareRaspuns> {
   await ceruteSesiune();
   try {
     const mesaj = await fn();
+    // Doar după succes: dacă Google n-a răspuns, ultima copie e tot ce avem.
+    await uitaCopiaBugetului(luna);
     revalidatePath("/bani", "layout");
     revalidatePath("/");
     return { mesaj };
@@ -91,13 +95,19 @@ export async function platesteDinEconomii(d: {
   data: string; categorie: string; suma: number; descriere: string; finantare: string; cont: string | number | null;
 }): Promise<StareRaspuns> {
   const sesiune = await ceruteSesiune();
-  const rezultat = await ruleaza(() => economii.platesteDinEconomii({ ...d, suma: nr(d.suma), cont: randSauNull(d.cont) }));
+  const rezultat = await ruleaza(() => economii.platesteDinEconomii({ ...d, suma: nr(d.suma), cont: randSauNull(d.cont) }), d.data.slice(0, 7));
   if (rezultat.mesaj) {
-    await db.insert(tranzactii).values({
-      luna: d.data.slice(0, 7), data: d.data, categorie: d.categorie, suma: nr(d.suma),
-      descriere: [d.descriere.trim(), d.finantare.toLowerCase()].filter(Boolean).join(" · "),
-      sursa: "manual", adaugatDe: sesiune.persoanaId, trimisLa: Math.floor(Date.now() / 1000),
-    });
+    try {
+      await db.insert(tranzactii).values({
+        luna: d.data.slice(0, 7), data: d.data, categorie: d.categorie, suma: nr(d.suma),
+        descriere: [d.descriere.trim(), d.finantare.toLowerCase()].filter(Boolean).join(" · "),
+        sursa: SURSA_ECONOMII, adaugatDe: sesiune.persoanaId, trimisLa: Math.floor(Date.now() / 1000),
+      });
+    } catch (eroare) {
+      // Plata e deja în foaie: o eroare aici ar îndemna la o a doua plată.
+      console.error("Plata din economii n-a intrat în copia locală:", eroare);
+      return { ...rezultat, avertisment: "Plata e în foaie, dar nu va apărea în Istoric. Nu o trece din nou." };
+    }
   }
   return rezultat;
 }

@@ -2,7 +2,7 @@ import "server-only";
 
 import { azi as ziuaDeAzi, adaugaLuni, lunaCurenta, lunaVecina, zileIntre } from "@/lib/formatare";
 
-import { scrieTranzactii, asiguraFoaiaLunii } from "./foaie-buget";
+import { asiguraFoaiaLunii, pregatesteTranzactii, type TranzactieDeScris } from "./foaie-buget";
 import { cereGoogle } from "./google";
 import {
   areScadenta,
@@ -23,9 +23,11 @@ import {
   FOND_URGENTA,
   GUILT_FREE,
   INVESTITII,
+  litera,
   numar,
   produsDupaPrelungire,
   r2,
+  randUrmatorInJurnal,
   scopDinFinantare,
   sumarLuna,
   surseDinEconomii,
@@ -42,8 +44,10 @@ import {
   Economiile, fondurile și venitul ocazional — citite din foaie și scrise înapoi.
 
   Fiecare operație face la fel ca meniurile din foaie („💰 Economii”, „🏠 Buget”):
-  recitește tot, verifică tot, abia apoi scrie. Așa o operație refuzată nu lasă
-  nimic pe jumătate. Socotelile sunt în `model-buget.ts` (pure, cu probe).
+  recitește tot, verifică tot, abia apoi scrie. Tot ce schimbă o operație —
+  tranzacții, solduri, jurnale — pleacă într-un singur apel (`scrieImpreuna`), ca
+  o eroare de rețea între două scrieri să nu lase soldul nemișcat lângă o
+  tranzacție notată. Socotelile sunt în `model-buget.ts` (pure, cu probe).
 */
 
 const SHEETS = "https://sheets.googleapis.com/v4/spreadsheets";
@@ -88,24 +92,53 @@ async function scrie(date: Scriere[]) {
   });
 }
 
-/** Adaugă rânduri la coada unei foi; o creează (cu antet) dacă lipsește. */
-async function adaugaLaCoada(foaie: string, antet: string[], randuri: unknown[][]) {
-  if (!randuri.length) return;
-  const trimite = () =>
-    cereGoogle(
-      `${SHEETS}/${idFoaie()}/values/${encodeURIComponent(interval(foaie, "A1"))}:append` +
-        "?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS",
-      { method: "POST", body: JSON.stringify({ values: randuri }) },
+/**
+ * Scrierea pentru coada unui jurnal. Foaia lipsă se creează și rândurile care nu
+ * încap se adaugă dinainte: amândouă sunt inofensive dacă scrierea pică apoi.
+ */
+async function scriereInJurnal(foaie: string, antet: string[], randuri: unknown[][]): Promise<Scriere[]> {
+  if (!randuri.length) return [];
+  const r = await cereGoogle<{ sheets?: { properties: { sheetId: number; title: string; gridProperties: { rowCount: number } } }[] }>(
+    `${SHEETS}/${idFoaie()}?fields=sheets.properties(sheetId,title,gridProperties.rowCount)`,
+  );
+  const gasita = r.sheets?.find((s) => s.properties.title === foaie)?.properties;
+  let info = gasita ? { sheetId: gasita.sheetId, randuri: gasita.gridProperties.rowCount } : null;
+  if (!info) {
+    const creata = await cereGoogle<{ replies: { addSheet: { properties: { sheetId: number; gridProperties: { rowCount: number } } } }[] }>(
+      `${SHEETS}/${idFoaie()}:batchUpdate`,
+      { method: "POST", body: JSON.stringify({ requests: [{ addSheet: { properties: { title: foaie } } }] }) },
     );
-  const exista = (await titluriFoi()).includes(foaie);
-  if (!exista) {
+    const p = creata.replies[0].addSheet.properties;
+    info = { sheetId: p.sheetId, randuri: p.gridProperties.rowCount };
+  }
+
+  const [coloana] = await citeste([interval(foaie, "A:A")]);
+  const urmator = randUrmatorInJurnal(coloana);
+  const valori = urmator === 1 ? [antet, ...randuri] : randuri;
+  const ultimul = urmator + valori.length - 1;
+  if (ultimul > info.randuri) {
     await cereGoogle(`${SHEETS}/${idFoaie()}:batchUpdate`, {
       method: "POST",
-      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: foaie } } }] }),
+      body: JSON.stringify({ requests: [{ appendDimension: { sheetId: info.sheetId, dimension: "ROWS", length: ultimul - info.randuri + 100 } }] }),
     });
-    await scrie([{ range: interval(foaie, "A1"), values: [antet] }]);
   }
-  await trimite();
+  return [{ range: interval(foaie, `A${urmator}:${litera(antet.length)}${ultimul}`), values: valori }];
+}
+
+/** Tot ce schimbă o operație, într-un singur apel. Ce aruncă aici n-a ajuns să scrie. */
+async function scrieImpreuna(d: {
+  scrieri?: Scriere[];
+  tranzactii?: { luna: string; randuri: TranzactieDeScris[] };
+  miscari?: unknown[][];
+  jurnal?: unknown[][];
+}) {
+  const tx = d.tranzactii?.randuri.length ? [(await pregatesteTranzactii(d.tranzactii.luna, d.tranzactii.randuri)).scriere] : [];
+  await scrie([
+    ...tx,
+    ...(d.scrieri ?? []),
+    ...(await scriereInJurnal(JURNAL, ANTET_JURNAL, d.jurnal ?? [])),
+    ...(await scriereInJurnal(MISCARI, ANTET_MISCARI, d.miscari ?? [])),
+  ]);
 }
 
 const miscare = (tip: string, din: string, inCont: string, suma: number, moneda: string,
@@ -262,9 +295,7 @@ export async function transferaLuna(
       suma, "RON", primit, dest?.moneda ?? "", r.categorie));
     facute.push(`${r.categorie} ${suma.toFixed(2)} lei`);
   }
-  await scrieTranzactii(luna, tx);
-  await scrie(scrieri);
-  await adaugaLaCoada(MISCARI, ANTET_MISCARI, log);
+  await scrieImpreuna({ tranzactii: { luna, randuri: tx }, scrieri, miscari: log });
   return `${facute.length === 1 ? "Un transfer notat" : `${facute.length} transferuri notate`}: ${facute.join(", ")}.`;
 }
 
@@ -279,9 +310,8 @@ export async function mutaBani(d: { din: number; spre: number; suma: number; pri
   if (!(primit > 0)) throw new Error("Suma primită trebuie să fie mai mare ca zero.");
   const scrieri = [...sold(din, -suma), ...sold(spre, primit)];
   const curs = din.moneda !== spre.moneda ? ` · curs ${(suma / primit).toFixed(4)}` : "";
-  await scrie(scrieri);
-  await adaugaLaCoada(MISCARI, ANTET_MISCARI, [miscare("Transfer", etichetaCont(din), etichetaCont(spre), suma, din.moneda,
-    primit, spre.moneda, (d.nota ?? "").trim() + curs)]);
+  await scrieImpreuna({ scrieri, miscari: [miscare("Transfer", etichetaCont(din), etichetaCont(spre), suma, din.moneda,
+    primit, spre.moneda, (d.nota ?? "").trim() + curs)] });
   return `${suma.toFixed(2)} ${din.moneda} mutați în „${etichetaCont(spre)}”` +
     (din.moneda !== spre.moneda ? ` (${primit.toFixed(2)} ${spre.moneda})` : "") + ".";
 }
@@ -320,11 +350,13 @@ export async function deschideCont(d: {
     { range: interval(ECONOMII, `N${rand}`), values: [[d.scop]] },
     { range: interval(ECONOMII, `Q${rand}:R${rand}`), values: [[ziuaDeAzi(), nota]] },
   ];
-  if (inBuget) await scrieTranzactii(luna, [{ data: d.data, categorie: d.scop, suma, descriere: `${d.tip} nou · ${d.institutie.trim()}`, finantare: "" }]);
-  await scrie(scrieri);
-  await adaugaLaCoada(MISCARI, ANTET_MISCARI, [miscare(d.tip === "Cont de economii" ? "Cont nou" : `${d.tip} nou`,
-    src ? etichetaCont(src) : suma > 0 ? "Venitul lunii" : "", `${d.institutie.trim()} · ${produs} · ${moneda}`, suma, moneda,
-    "", "", `${(rata * 100).toFixed(2)}%${scadenta ? ` · scadență ${ziCuPuncte(scadenta)}` : ""} · ${d.scop}`)]);
+  await scrieImpreuna({
+    tranzactii: inBuget ? { luna, randuri: [{ data: d.data, categorie: d.scop, suma, descriere: `${d.tip} nou · ${d.institutie.trim()}`, finantare: "" }] } : undefined,
+    scrieri,
+    miscari: [miscare(d.tip === "Cont de economii" ? "Cont nou" : `${d.tip} nou`,
+      src ? etichetaCont(src) : suma > 0 ? "Venitul lunii" : "", `${d.institutie.trim()} · ${produs} · ${moneda}`, suma, moneda,
+      "", "", `${(rata * 100).toFixed(2)}%${scadenta ? ` · scadență ${ziCuPuncte(scadenta)}` : ""} · ${d.scop}`)],
+  });
 
   if (!cuScadenta) return `Cont nou: ${d.institutie.trim()} · ${produs}, pentru „${d.scop}”.` + (inBuget ? ` ${suma.toFixed(2)} lei trecuți și în buget.` : "");
   const net = dobandaNeta(suma, rata, zileIntre(d.data, scadenta!), d.tip === "Titluri de stat", economii.impozit);
@@ -366,16 +398,17 @@ export async function scadenta(d: {
       { range: interval(ECONOMII, `Q${dep.rand}:R${dep.rand}`), values: [[ziuaDeAzi(), `constituit ${ziCuPuncte(start)} · ${luni} luni`]] },
     );
     log.push(miscare("Depozit prelungit", et, et, dep.sold, dep.moneda, "", "", `${(rata * 100).toFixed(2)}% · ${luni} luni · scadență ${ziCuPuncte(noua)}`));
-    await scrie(scrieri);
-    await adaugaLaCoada(MISCARI, ANTET_MISCARI, log);
+    await scrieImpreuna({ scrieri, miscari: log });
     return `Prelungit ${luni} luni la ${(rata * 100).toFixed(2)}%, scadență ${ziCuPuncte(noua)}.`;
   }
 
   const dest = cont(economii, d.contLichidare);
   if (dest.moneda !== dep.moneda) throw new Error("Lichidarea merge într-un cont în aceeași monedă.");
   const total = r2(dep.sold + dobanda);
-  await scrie([...sold(dest, total), ...golesteRand(dep.rand)]);
-  await adaugaLaCoada(MISCARI, ANTET_MISCARI, [miscare("Depozit lichidat", et, etichetaCont(dest), total, dep.moneda, "", "", `din care dobândă ${dobanda.toFixed(2)}`)]);
+  await scrieImpreuna({
+    scrieri: [...sold(dest, total), ...golesteRand(dep.rand)],
+    miscari: [miscare("Depozit lichidat", et, etichetaCont(dest), total, dep.moneda, "", "", `din care dobândă ${dobanda.toFixed(2)}`)],
+  });
   return `${total.toFixed(2)} ${dep.moneda} au intrat în „${etichetaCont(dest)}”.`;
 }
 
@@ -398,8 +431,7 @@ export async function actualizeazaSolduri(lista: { rand: number; sold: number }[
     scrieri.push({ range: interval(ECONOMII, `F${c.rand}`), values: [[nou]] }, { range: interval(ECONOMII, `Q${c.rand}`), values: [[ziuaDeAzi()]] });
     log.push(miscare("Ajustare sold", "", etichetaCont(c), r2(nou - c.sold), c.moneda, "", "", `actualizare: ${c.sold.toFixed(2)} → ${nou.toFixed(2)}`));
   }
-  await scrie(scrieri);
-  await adaugaLaCoada(MISCARI, ANTET_MISCARI, log);
+  await scrieImpreuna({ scrieri, miscari: log });
   return log.length ? `${log.length === 1 ? "Un sold actualizat" : `${log.length} solduri actualizate`}.` : "Nimic de schimbat.";
 }
 
@@ -423,9 +455,8 @@ export async function inchideCont(d: { rand: number; destinatie: number | "afara
   }
   const castig = esteInvestitie(c) && c.depus > 0 ? r2(c.sold - c.depus) : null;
   scrieri.push(...golesteRand(c.rand));
-  await scrie(scrieri);
-  await adaugaLaCoada(MISCARI, ANTET_MISCARI, [miscare(esteInvestitie(c) ? "Investiție vândută" : "Cont închis", et, unde, total, c.moneda,
-    primit, monedaPrimita, [castig != null ? `câștig realizat ${castig >= 0 ? "+" : ""}${castig.toFixed(2)} ${c.moneda}` : "", d.nota ?? ""].filter(Boolean).join(" · "))]);
+  await scrieImpreuna({ scrieri, miscari: [miscare(esteInvestitie(c) ? "Investiție vândută" : "Cont închis", et, unde, total, c.moneda,
+    primit, monedaPrimita, [castig != null ? `câștig realizat ${castig >= 0 ? "+" : ""}${castig.toFixed(2)} ${c.moneda}` : "", d.nota ?? ""].filter(Boolean).join(" · "))] });
   return `„${et}” e închis.` + (castig != null ? ` Câștig realizat: ${castig >= 0 ? "+" : ""}${castig.toFixed(2)} ${c.moneda}.` : "");
 }
 
@@ -441,11 +472,11 @@ export async function platesteDinEconomii(d: {
   const c = d.cont != null ? cont(economii, d.cont) : null;
   const inMoneda = c ? (c.moneda === "RON" ? suma : conversie(suma, 1, c.curs)) : 0;
   const scrieri = c ? sold(c, -inMoneda) : [];       // verifică soldul înainte de orice scriere
-  await scrieTranzactii(luna, [{ data: d.data, categorie: d.categorie, suma, descriere: d.descriere, finantare: d.finantare }]);
-  if (c) {
-    await scrie(scrieri);
-    await adaugaLaCoada(MISCARI, ANTET_MISCARI, [miscare("Plată din economii", etichetaCont(c), d.categorie, inMoneda, c.moneda, "", "", d.descriere)]);
-  }
+  await scrieImpreuna({
+    tranzactii: { luna, randuri: [{ data: d.data, categorie: d.categorie, suma, descriere: d.descriere, finantare: d.finantare }] },
+    scrieri,
+    miscari: c ? [miscare("Plată din economii", etichetaCont(c), d.categorie, inMoneda, c.moneda, "", "", d.descriere)] : [],
+  });
   return `${suma.toFixed(2)} lei pe „${d.categorie}”, ${d.finantare.toLowerCase()}.` + (c ? ` Contul „${etichetaCont(c)}” a scăzut.` : "");
 }
 
@@ -518,11 +549,13 @@ export async function venitOcazional(d: {
     if (x > 0 && rand) { scrieri.push({ range: interval(luna, `C${rand.rand}`), values: [[r2(rand.plan + x)]] }); rand.plan = r2(rand.plan + x); }
   }
 
-  await adaugaLaCoada(JURNAL, ANTET_JURNAL, [[d.data, `'${luna}`, d.sursa, descriere, suma, zeciuiala, parti.inv,
-    parti.fond > 0 ? d.fond : "", parti.fond, parti.gfF, parti.gfR, `din aplicație, ${ziCuPuncte(ziuaDeAzi())}`, d.pentru]]);
-  if (tx.length) await scrieTranzactii(luna, tx);
-  await scrie(scrieri);
-  await adaugaLaCoada(MISCARI, ANTET_MISCARI, log);
+  await scrieImpreuna({
+    jurnal: [[d.data, `'${luna}`, d.sursa, descriere, suma, zeciuiala, parti.inv,
+      parti.fond > 0 ? d.fond : "", parti.fond, parti.gfF, parti.gfR, `din aplicație, ${ziCuPuncte(ziuaDeAzi())}`, d.pentru]],
+    tranzactii: { luna, randuri: tx },
+    scrieri,
+    miscari: log,
+  });
 
   return `${suma.toFixed(2)} lei înregistrați.` + (zeciuiala > 0 ? ` Zeciuială ${zeciuiala.toFixed(2)}.` : "") +
     (mutate.length ? ` Mutat: ${mutate.join("; ")}.` : "") + (deMutat.length ? ` De mutat: ${deMutat.join("; ")}.` : "");

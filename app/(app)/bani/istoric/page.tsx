@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import Antet from "@/componente/Antet";
 import { lei, lunaCurenta, lunaInCuvinte, lunaVecina, ziLunga } from "@/lib/formatare";
-import { cheltuieliLunii } from "@/lib/servicii/buget";
+import { cheltuieliLunii, SURSA_ECONOMII } from "@/lib/servicii/buget";
 
 export const metadata = { title: "Istoric — Acasă" };
 
@@ -27,16 +27,19 @@ export default async function PaginaIstoric({
     LUNA_VALIDA.test(lunaCeruta ?? "") && lunaCeruta! <= lunaDeAcum ? lunaCeruta! : lunaDeAcum;
 
   const cheltuieli = await cheltuieliLunii(luna);
-  const total = cheltuieli.reduce((t, c) => t + c.suma, 0);
+  // Plățile din economii se văd în listă, dar nu se adună la cheltuielile lunii.
+  const inBuget = (c: (typeof cheltuieli)[number]) => (c.sursa === SURSA_ECONOMII ? 0 : c.suma);
+  const dinBuget = cheltuieli.filter((c) => c.sursa !== SURSA_ECONOMII).length;
+  const total = cheltuieli.reduce((t, c) => t + inBuget(c), 0);
 
   const peZile: { zi: string; total: number; randuri: typeof cheltuieli }[] = [];
   for (const c of cheltuieli) {
     const ultima = peZile.at(-1);
     if (ultima?.zi === c.data) {
       ultima.randuri.push(c);
-      ultima.total += c.suma;
+      ultima.total += inBuget(c);
     } else {
-      peZile.push({ zi: c.data, total: c.suma, randuri: [c] });
+      peZile.push({ zi: c.data, total: inBuget(c), randuri: [c] });
     }
   }
 
@@ -46,9 +49,9 @@ export default async function PaginaIstoric({
         supratitlu="Bani · Istoric"
         titlu={cheltuieli.length === 0 ? "Nimic trecut" : `${lei(total, true)} trecuți`}
         dreapta={
-          cheltuieli.length > 0 ? (
+          dinBuget > 0 ? (
             <span className="text-sm text-white/70">
-              {cheltuieli.length === 1 ? "o cheltuială" : `${cheltuieli.length} cheltuieli`}
+              {dinBuget === 1 ? "o cheltuială" : `${dinBuget} cheltuieli`}
             </span>
           ) : null
         }

@@ -107,6 +107,13 @@ export function litera(coloana: number) {
   return r;
 }
 
+/** Primul rând liber al unui jurnal, din coloana lui A. Gol = încă n-are nici antet. */
+export function randUrmatorInJurnal(coloanaA: unknown[][]) {
+  let ultim = 0;
+  coloanaA.forEach((r, i) => { if (text(r?.[0])) ultim = i + 1; });
+  return ultim + 1;
+}
+
 /* ------------------------------------------------------------ foaia lunii */
 
 export type RandVenit = { rand: number; nume: string; plan: number; real: number };
