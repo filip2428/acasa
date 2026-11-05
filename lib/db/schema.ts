@@ -511,7 +511,7 @@ export const tranzactii = sqliteTable(
     categorie: text("categorie").notNull(),
     suma: real("suma").notNull(),
     descriere: text("descriere"),
-    // manual | lista | bon
+    // manual | lista | bon | economii (plătit din economii, în afara bugetului)
     sursa: text("sursa").notNull().default("manual"),
     listaId: integer("lista_id").references(() => liste.id),
     bonId: integer("bon_id").references(() => bonuri.id),

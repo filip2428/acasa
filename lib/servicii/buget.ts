@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, isNull, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, notInArray, sql } from "drizzle-orm";
 import { after } from "next/server";
 
 import { db } from "@/lib/db";
@@ -340,6 +340,24 @@ export async function trimiteCheltuieli(
   }
 }
 
+/**
+ * Plățile din economii se țin și local, ca să apară în Istoric, dar nu sunt
+ * cheltuieli din bugetul lunii: nu intră în totaluri.
+ */
+export const SURSA_ECONOMII = "economii";
+
+/**
+ * Foaia s-a schimbat: următorul ecran recitește bugetul. Nu pică dacă nu reușește,
+ * pentru că scrierea în foaie s-a făcut deja, iar copia expiră oricum singură.
+ */
+export async function uitaCopiaBugetului(luna: string) {
+  try {
+    await db.delete(bugetLunar).where(eq(bugetLunar.luna, luna));
+  } catch (eroare) {
+    console.error("Nu am putut goli copia locală a bugetului:", eroare);
+  }
+}
+
 /** Toate cheltuielile trecute din aplicație într-o lună, cu cine le-a trecut. */
 export async function cheltuieliLunii(luna: string) {
   return db
@@ -365,10 +383,11 @@ export async function rezumatulLunii(luna = lunaCurenta()) {
     db
       .select({ cate: sql<number>`count(*)`, suma: sql<number>`coalesce(sum(${tranzactii.suma}), 0)` })
       .from(tranzactii)
-      .where(eq(tranzactii.luna, luna)),
+      .where(and(eq(tranzactii.luna, luna), ne(tranzactii.sursa, SURSA_ECONOMII))),
     db
       .select({ categorie: tranzactii.categorie, data: tranzactii.data, suma: tranzactii.suma })
       .from(tranzactii)
+      .where(ne(tranzactii.sursa, SURSA_ECONOMII))
       .orderBy(desc(tranzactii.creatLa))
       .limit(1),
   ]);

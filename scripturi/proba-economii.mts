@@ -18,6 +18,7 @@ import {
   numar,
   procenteRegula,
   produsDupaPrelungire,
+  randUrmatorInJurnal,
   scopDinFinantare,
   sumarLuna,
   surseDinEconomii,
@@ -138,6 +139,9 @@ assert.equal(produsDupaPrelungire("Depozit 3 luni", 6), "Depozit 6 luni");
 assert.equal(produsDupaPrelungire("Titluri de stat 12 luni", 24), "Titluri de stat 24 luni");
 assert.equal(produsDupaPrelungire("Fidelis 2027", 12), "Fidelis 2027", "numele pus de mână rămâne");
 assert.equal(produsDupaPrelungire("", 12), "");
+assert.equal(randUrmatorInJurnal([]), 1, "jurnal gol");
+assert.equal(randUrmatorInJurnal([["Data"], ["2026-11-05"], ["2026-11-06"]]), 4);
+assert.equal(randUrmatorInJurnal([["Data"], [], ["2026-11-06"], [""]]), 4, "golurile din mijloc rămân, cele de la coadă nu contează");
 const baza = costDeBaza([luna]);
 assert.deepEqual(baza, { baza: 150, cuTampon: 187.5 });
 console.log("✓ curs, dobândă (cu și fără impozit), cost la retragere, cost de bază");

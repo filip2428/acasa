@@ -87,15 +87,11 @@ export type RezultatScriere = {
   avertisment: string | null;
 };
 
-/** Adaugă tranzacții la coada tabelului din foaia lunii. */
-export async function scrieTranzactii(
-  luna: string,
-  tranzactii: TranzactieDeScris[],
-): Promise<RezultatScriere> {
-  if (tranzactii.length === 0) {
-    return { primulRand: 0, cate: 0, foaieCreata: false, avertisment: null };
-  }
-
+/**
+ * Verifică tot și spune unde și ce s-ar scrie, fără să scrie. Așa operațiile de
+ * economii pot trimite tranzacțiile în același apel cu soldurile.
+ */
+export async function pregatesteTranzactii(luna: string, tranzactii: TranzactieDeScris[]) {
   const { creata } = await asiguraFoaiaLunii(luna);
 
   const citit = await cereGoogle<RaspunsValori>(
@@ -126,17 +122,35 @@ export async function scrieTranzactii(
     cuFinantare ? asezare.coloanaFinantare! : asezare.coloanaDescriere,
   )}${pana_la}`;
 
-  await cereGoogle(
-    `${SHEETS}/${sheetId()}/values/${encodeURIComponent(interval)}?valueInputOption=USER_ENTERED`,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        values: tranzactii.map((t) => {
-          const rand = [t.data, t.categorie, t.suma, t.descriere ?? ""];
-          return cuFinantare ? [...rand, t.finantare ?? ""] : rand;
-        }),
+  return {
+    asezare,
+    creata,
+    de_la,
+    pana_la,
+    scriere: {
+      range: interval,
+      values: tranzactii.map((t) => {
+        const rand = [t.data, t.categorie, t.suma, t.descriere ?? ""];
+        return cuFinantare ? [...rand, t.finantare ?? ""] : rand;
       }),
     },
+  };
+}
+
+/** Adaugă tranzacții la coada tabelului din foaia lunii. */
+export async function scrieTranzactii(
+  luna: string,
+  tranzactii: TranzactieDeScris[],
+): Promise<RezultatScriere> {
+  if (tranzactii.length === 0) {
+    return { primulRand: 0, cate: 0, foaieCreata: false, avertisment: null };
+  }
+
+  const { asezare, creata, de_la, pana_la, scriere } = await pregatesteTranzactii(luna, tranzactii);
+
+  await cereGoogle(
+    `${SHEETS}/${sheetId()}/values/${encodeURIComponent(scriere.range)}?valueInputOption=USER_ENTERED`,
+    { method: "PUT", body: JSON.stringify({ values: scriere.values }) },
   );
 
   // Abia după scriere ne uităm la formule: verificarea e un plus, nu o condiție.
